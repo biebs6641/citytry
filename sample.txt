@@ -1,24 +1,45 @@
-import com.example.bdd.base.TestBase;
-import io.cucumber.java.After;
-import io.cucumber.java.Before;
-import io.cucumber.java.Scenario;
-import org.openqa.selenium.OutputType;
-import org.openqa.selenium.TakesScreenshot;
+package com.example.bdd.pages;
 
-public class Hooks extends TestBase {
+import org.openqa.selenium.WebDriver;
+import org.openqa.selenium.WebElement;
+import org.openqa.selenium.support.FindBy;
+import org.openqa.selenium.support.PageFactory;
 
-    @Before
-    public void setup() {
-        initialize();
+public class LoginPage {
+
+    private final WebDriver driver;
+
+    @FindBy(id = "user-name")
+    private WebElement usernameInput;
+
+    @FindBy(id = "password")
+    private WebElement passwordInput;
+
+    @FindBy(id = "login-button")
+    private WebElement loginButton;
+
+    public LoginPage(WebDriver driver) {
+        this.driver = driver;
+        PageFactory.initElements(driver, this);
     }
 
-    @After
-    public void teardown(Scenario scenario) {
-        if (scenario.isFailed()) {
-            // Take screenshot on failure
-            final byte[] screenshot = ((TakesScreenshot) getDriver()).getScreenshotAs(OutputType.BYTES);
-            scenario.attach(screenshot, "image/png", "FailedScenarioScreenshot");
-        }
-        TestBase.tearDown();
+    public void enterUsername(String username) {
+        usernameInput.sendKeys(username);
+    }
+
+
+
+    public void enterPassword(String password) {
+        passwordInput.sendKeys(password);
+    }
+
+    public void clickLoginButton() {
+        loginButton.click();
+    }
+
+    public void login(String username, String password) {
+        enterUsername(username);
+        enterPassword(password);
+        clickLoginButton();
     }
 }
