@@ -1,33 +1,55 @@
+package com.example.bdd.utils;
+
+import org.apache.poi.ss.usermodel.*;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+
 import java.io.FileInputStream;
 import java.io.IOException;
-import java.util.Properties;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
-public class ConfigReader {
+public class ExcelUtils {
 
-    private final Properties properties;
+    /**
+     * Reads data from an Excel sheet and returns it as a List of Maps.
+     * Each map represents a row, with column headers as keys.
+     *
+     * @param filePath  Path to the Excel file.
+     * @param sheetName Name of the sheet to read.
+     * @return List of Maps containing row data.
+     */
+    public static List<Map<String, String>> getTestData(String filePath, String sheetName) {
+        List<Map<String, String>> testDataList = new ArrayList<>();
+        try (FileInputStream fis = new FileInputStream(filePath);
+             Workbook workbook = new XSSFWorkbook(fis)) {
 
-    public ConfigReader() {
-        properties = new Properties();
-        try (FileInputStream fis = new FileInputStream("src/test/resources/config/config.properties")) {
-            properties.load(fis);
+            Sheet sheet = workbook.getSheet(sheetName);
+            if (sheet == null) {
+                throw new IllegalArgumentException("Sheet " + sheetName + " not found in " + filePath);
+            }
+
+            Row headerRow = sheet.getRow(0);
+            for (int i = 1; i <= sheet.getLastRowNum(); i++) {
+                Row currentRow = sheet.getRow(i);
+                Map<String, String> rowMap = new HashMap<>();
+                if(currentRow != null){
+                    for (int j = 0; j < headerRow.getLastCellNum(); j++) {
+                        Cell headerCell = headerRow.getCell(j);
+                        Cell currentCell = currentRow.getCell(j);
+                        if (headerCell != null) {
+                            String key = headerCell.getStringCellValue();
+                            String value = (currentCell != null) ? currentCell.toString() : "";
+                            rowMap.put(key, value);
+                        }
+                    }
+                    testDataList.add(rowMap);
+                }
+            }
         } catch (IOException e) {
-            throw new RuntimeException("Configuration properties file not found", e);
+            throw new RuntimeException("Failed to read Excel file", e);
         }
-    }
-
-    public String getBrowser() {
-        return properties.getProperty("browser");
-    }
-
-    public String getApplicationUrl() {
-        return properties.getProperty("url");
-    }
-
-    public long getImplicitWait() {
-        return Long.parseLong(properties.getProperty("implicitWait"));
-    }
-
-    public long getPageLoadTimeout() {
-        return Long.parseLong(properties.getProperty("pageLoadTimeout"));
+        return testDataList;
     }
 }
