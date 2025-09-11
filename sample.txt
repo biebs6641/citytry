@@ -1,49 +1,23 @@
-<dependencies>
-    <!-- Selenium -->
-    <dependency>
-        <groupId>org.seleniumhq.selenium</groupId>
-        <artifactId>selenium-java</artifactId>
-        <version>4.14.0</version>
-    </dependency>
+package com.mycompany.base;
 
-    <!-- TestNG -->
-    <dependency>
-        <groupId>org.testng</groupId>
-        <artifactId>testng</artifactId>
-        <version>7.8.0</version>
-        <scope>test</scope>
-    </dependency>
+import java.io.FileInputStream;
+import java.util.Properties;
 
-    <!-- Cucumber -->
-    <dependency>
-        <groupId>io.cucumber</groupId>
-        <artifactId>cucumber-java</artifactId>
-        <version>8.14.0</version>
-    </dependency>
-    <dependency>
-        <groupId>io.cucumber</groupId>
-        <artifactId>cucumber-testng</artifactId>
-        <version>8.14.0</version>
-    </dependency>
+public class ConfigReader {
+    private static Properties prop;
 
-    <!-- Apache POI for Excel -->
-    <dependency>
-        <groupId>org.apache.poi</groupId>
-        <artifactId>poi-ooxml</artifactId>
-        <version>5.2.3</version>
-    </dependency>
+    public static void loadProperties() {
+        try {
+            FileInputStream fis = new FileInputStream("src/main/resources/config.properties");
+            prop = new Properties();
+            prop.load(fis);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
 
-    <!-- Extent Reports -->
-    <dependency>
-        <groupId>com.aventstack</groupId>
-        <artifactId>extentreports</artifactId>
-        <version>5.0.9</version>
-    </dependency>
-
-    <!-- WebDriver Manager -->
-    <dependency>
-        <groupId>io.github.bonigarcia</groupId>
-        <artifactId>webdrivermanager</artifactId>
-        <version>5.5.0</version>
-    </dependency>
-</dependencies>
+    public static String getProperty(String key) {
+        if(prop == null) loadProperties();
+        return prop.getProperty(key);
+    }
+}
