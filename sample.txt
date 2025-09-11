@@ -1,45 +1,38 @@
-package com.example.bdd.pages;
+package stepdefinitions;
 
-import org.openqa.selenium.WebDriver;
-import org.openqa.selenium.WebElement;
-import org.openqa.selenium.support.FindBy;
-import org.openqa.selenium.support.PageFactory;
+import com.example.bdd.base.TestBase;
+import com.example.bdd.pages.LoginPage;
+import io.cucumber.java.en.Given;
+import io.cucumber.java.en.Then;
+import io.cucumber.java.en.When;
+import org.testng.Assert;
 
-public class LoginPage {
+public class LoginSteps {
 
-    private final WebDriver driver;
+    private final LoginPage loginPage = new LoginPage(TestBase.getDriver());
 
-    @FindBy(id = "user-name")
-    private WebElement usernameInput;
-
-    @FindBy(id = "password")
-    private WebElement passwordInput;
-
-    @FindBy(id = "login-button")
-    private WebElement loginButton;
-
-    public LoginPage(WebDriver driver) {
-        this.driver = driver;
-        PageFactory.initElements(driver, this);
+    @Given("user is on the application login page")
+    public void user_is_on_the_application_login_page() {
+        // The URL is already opened in the Hooks' @Before method
+        String title = TestBase.getDriver().getTitle();
+        Assert.assertEquals(title, "Swag Labs", "User is not on the login page");
     }
 
-    public void enterUsername(String username) {
-        usernameInput.sendKeys(username);
+    @When("user enters username {string} and password {string}")
+    public void user_enters_username_and_password(String username, String password) {
+        loginPage.enterUsername(username);
+        loginPage.enterPassword(password);
     }
 
-
-
-    public void enterPassword(String password) {
-        passwordInput.sendKeys(password);
+    @When("clicks on the login button")
+    public void clicks_on_the_login_button() {
+        loginPage.clickLoginButton();
     }
 
-    public void clickLoginButton() {
-        loginButton.click();
-    }
-
-    public void login(String username, String password) {
-        enterUsername(username);
-        enterPassword(password);
-        clickLoginButton();
+    @Then("user is navigated to the home page")
+    public void user_is_navigated_to_the_home_page() {
+        // Simple assertion for demonstration. You would typically verify a unique element on the home page.
+        String currentUrl = TestBase.getDriver().getCurrentUrl();
+        Assert.assertTrue(currentUrl.contains("inventory.html"), "Login was not successful");
     }
 }
