@@ -1,35 +1,24 @@
 package com.mycompany.base;
 
-import org.openqa.selenium.WebDriver;
-import org.openqa.selenium.By;
-import org.openqa.selenium.support.ui.WebDriverWait;
-import org.openqa.selenium.support.ui.ExpectedConditions;
-import java.time.Duration;
+import org.apache.poi.ss.usermodel.*;
+import java.io.File;
+import java.io.FileInputStream;
 
-public class BaseClass {
-    protected WebDriver driver;
-    protected WebDriverWait wait;
+public class ExcelReader {
 
-    public BaseClass() {
-        driver = DriverFactory.getDriver();
-        wait = new WebDriverWait(driver, Duration.ofSeconds(
-            Integer.parseInt(ConfigReader.getProperty("implicitWait"))
-        ));
-    }
-
-    public void navigateTo(String url) {
-        driver.get(url);
-    }
-
-    public void click(By locator) {
-        wait.until(ExpectedConditions.elementToBeClickable(locator)).click();
-    }
-
-    public void type(By locator, String text) {
-        wait.until(ExpectedConditions.visibilityOfElementLocated(locator)).sendKeys(text);
-    }
-
-    public String getText(By locator) {
-        return wait.until(ExpectedConditions.visibilityOfElementLocated(locator)).getText();
+    public static String getCellData(String filePath, String sheetName, int rowNum, int colNum) {
+        try {
+            FileInputStream fis = new FileInputStream(new File(filePath));
+            Workbook workbook = WorkbookFactory.create(fis);
+            Sheet sheet = workbook.getSheet(sheetName);
+            Row row = sheet.getRow(rowNum);
+            Cell cell = row.getCell(colNum);
+            workbook.close();
+            fis.close();
+            return cell.toString();
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        }
     }
 }
