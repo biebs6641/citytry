@@ -1,55 +1,24 @@
-package com.example.bdd.utils;
+import com.example.bdd.base.TestBase;
+import io.cucumber.java.After;
+import io.cucumber.java.Before;
+import io.cucumber.java.Scenario;
+import org.openqa.selenium.OutputType;
+import org.openqa.selenium.TakesScreenshot;
 
-import org.apache.poi.ss.usermodel.*;
-import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+public class Hooks extends TestBase {
 
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+    @Before
+    public void setup() {
+        initialize();
+    }
 
-public class ExcelUtils {
-
-    /**
-     * Reads data from an Excel sheet and returns it as a List of Maps.
-     * Each map represents a row, with column headers as keys.
-     *
-     * @param filePath  Path to the Excel file.
-     * @param sheetName Name of the sheet to read.
-     * @return List of Maps containing row data.
-     */
-    public static List<Map<String, String>> getTestData(String filePath, String sheetName) {
-        List<Map<String, String>> testDataList = new ArrayList<>();
-        try (FileInputStream fis = new FileInputStream(filePath);
-             Workbook workbook = new XSSFWorkbook(fis)) {
-
-            Sheet sheet = workbook.getSheet(sheetName);
-            if (sheet == null) {
-                throw new IllegalArgumentException("Sheet " + sheetName + " not found in " + filePath);
-            }
-
-            Row headerRow = sheet.getRow(0);
-            for (int i = 1; i <= sheet.getLastRowNum(); i++) {
-                Row currentRow = sheet.getRow(i);
-                Map<String, String> rowMap = new HashMap<>();
-                if(currentRow != null){
-                    for (int j = 0; j < headerRow.getLastCellNum(); j++) {
-                        Cell headerCell = headerRow.getCell(j);
-                        Cell currentCell = currentRow.getCell(j);
-                        if (headerCell != null) {
-                            String key = headerCell.getStringCellValue();
-                            String value = (currentCell != null) ? currentCell.toString() : "";
-                            rowMap.put(key, value);
-                        }
-                    }
-                    testDataList.add(rowMap);
-                }
-            }
-        } catch (IOException e) {
-            throw new RuntimeException("Failed to read Excel file", e);
+    @After
+    public void teardown(Scenario scenario) {
+        if (scenario.isFailed()) {
+            // Take screenshot on failure
+            final byte[] screenshot = ((TakesScreenshot) getDriver()).getScreenshotAs(OutputType.BYTES);
+            scenario.attach(screenshot, "image/png", "FailedScenarioScreenshot");
         }
-        return testDataList;
+        TestBase.tearDown();
     }
 }
