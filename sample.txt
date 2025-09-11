@@ -1,77 +1,33 @@
-package com.example.bdd.base;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.util.Properties;
 
-import com.example.bdd.utils.ConfigReader;
-import io.github.bonigarcia.wdm.WebDriverManager;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-import org.openqa.selenium.WebDriver;
-import org.openqa.selenium.chrome.ChromeDriver;
-import org.openqa.selenium.edge.EdgeDriver;
-import org.openqa.selenium.firefox.FirefoxDriver;
-import org.openqa.selenium.safari.SafariDriver;
+public class ConfigReader {
 
-import java.time.Duration;
+    private final Properties properties;
 
-public class TestBase {
-
-    public static WebDriver driver;
-    public static ConfigReader configReader;
-    private static final Logger logger = LogManager.getLogger(TestBase.class);
-    private static final ThreadLocal<WebDriver> threadLocalDriver = new ThreadLocal<>();
-
-    /**
-     * Initializes the WebDriver based on the browser specified in the config file.
-     * This method is thread-safe for parallel execution.
-     */
-    public void initialize() {
-        configReader = new ConfigReader();
-        String browser = configReader.getBrowser();
-        logger.info("Initializing browser: {}", browser);
-
-        switch (browser.toLowerCase()) {
-            case "chrome":
-                WebDriverManager.chromedriver().setup();
-                threadLocalDriver.set(new ChromeDriver());
-                break;
-            case "firefox":
-                WebDriverManager.firefoxdriver().setup();
-                threadLocalDriver.set(new FirefoxDriver());
-                break;
-            case "edge":
-                WebDriverManager.edgedriver().setup();
-                threadLocalDriver.set(new EdgeDriver());
-                break;
-            case "safari":
-                WebDriverManager.getInstance(SafariDriver.class).setup();
-                threadLocalDriver.set(new SafariDriver());
-                break;
-            default:
-                throw new IllegalArgumentException("Browser not supported: " + browser);
+    public ConfigReader() {
+        properties = new Properties();
+        try (FileInputStream fis = new FileInputStream("src/test/resources/config/config.properties")) {
+            properties.load(fis);
+        } catch (IOException e) {
+            throw new RuntimeException("Configuration properties file not found", e);
         }
-
-        getDriver().manage().timeouts().implicitlyWait(Duration.ofSeconds(configReader.getImplicitWait()));
-        getDriver().manage().timeouts().pageLoadTimeout(Duration.ofSeconds(configReader.getPageLoadTimeout()));
-        getDriver().manage().window().maximize();
-        getDriver().get(configReader.getApplicationUrl());
-        logger.info("Navigated to URL: {}", configReader.getApplicationUrl());
     }
 
-    /**
-     * Gets the current thread's WebDriver instance.
-     * @return WebDriver instance.
-     */
-    public static synchronized WebDriver getDriver() {
-        return threadLocalDriver.get();
+    public String getBrowser() {
+        return properties.getProperty("browser");
     }
 
-    /**
-     * Quits the driver and removes it from the thread local storage.
-     */
-    public static void tearDown() {
-        if (getDriver() != null) {
-            logger.info("Closing the browser.");
-            getDriver().quit();
-            threadLocalDriver.remove();
-        }
+    public String getApplicationUrl() {
+        return properties.getProperty("url");
+    }
+
+    public long getImplicitWait() {
+        return Long.parseLong(properties.getProperty("implicitWait"));
+    }
+
+    public long getPageLoadTimeout() {
+        return Long.parseLong(properties.getProperty("pageLoadTimeout"));
     }
 }
