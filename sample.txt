@@ -1,38 +1,9 @@
-package stepdefinitions;
+# Browser can be chrome, firefox, edge, safari
+browser=chrome
 
-import com.example.bdd.base.TestBase;
-import com.example.bdd.pages.LoginPage;
-import io.cucumber.java.en.Given;
-import io.cucumber.java.en.Then;
-import io.cucumber.java.en.When;
-import org.testng.Assert;
+# Base URL of the application to be tested
+url=https://www.saucedemo.com
 
-public class LoginSteps {
-
-    private final LoginPage loginPage = new LoginPage(TestBase.getDriver());
-
-    @Given("user is on the application login page")
-    public void user_is_on_the_application_login_page() {
-        // The URL is already opened in the Hooks' @Before method
-        String title = TestBase.getDriver().getTitle();
-        Assert.assertEquals(title, "Swag Labs", "User is not on the login page");
-    }
-
-    @When("user enters username {string} and password {string}")
-    public void user_enters_username_and_password(String username, String password) {
-        loginPage.enterUsername(username);
-        loginPage.enterPassword(password);
-    }
-
-    @When("clicks on the login button")
-    public void clicks_on_the_login_button() {
-        loginPage.clickLoginButton();
-    }
-
-    @Then("user is navigated to the home page")
-    public void user_is_navigated_to_the_home_page() {
-        // Simple assertion for demonstration. You would typically verify a unique element on the home page.
-        String currentUrl = TestBase.getDriver().getCurrentUrl();
-        Assert.assertTrue(currentUrl.contains("inventory.html"), "Login was not successful");
-    }
-}
+# Timeouts in seconds
+implicitWait=10
+pageLoadTimeout=30
