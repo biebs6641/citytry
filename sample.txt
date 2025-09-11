@@ -1,8 +1,13 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<suite name="BDD Test Suite" parallel="false">
-    <test name="Cucumber Tests">
-        <classes>
-            <class name="com.mycompany.runners.TestRunner"/>
-        </classes>
-    </test>
-</suite>
+Feature: Login Functionality
+
+  Scenario: Successful login with valid credentials
+    Given User is on the login page
+    When User enters valid username and password
+    And User clicks on the login button
+    Then User should be redirected to the dashboard
+
+  Scenario: Login failure with invalid credentials
+    Given User is on the login page
+    When User enters invalid username or password
+    And User clicks on the login button
+    Then User should see an error message
