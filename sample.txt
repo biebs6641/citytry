@@ -1,13 +1,46 @@
-Feature: Login Functionality
+package com.mycompany.stepdefinitions;
 
-  Scenario: Successful login with valid credentials
-    Given User is on the login page
-    When User enters valid username and password
-    And User clicks on the login button
-    Then User should be redirected to the dashboard
+import com.mycompany.base.BaseClass;
+import io.cucumber.java.en.*;
+import org.openqa.selenium.By;
 
-  Scenario: Login failure with invalid credentials
-    Given User is on the login page
-    When User enters invalid username or password
-    And User clicks on the login button
-    Then User should see an error message
+public class LoginSteps extends BaseClass {
+
+    @Given("User is on the login page")
+    public void user_is_on_login_page() {
+        navigateTo("https://example.com/login"); // replace with actual URL
+    }
+
+    @When("User enters valid username and password")
+    public void enter_valid_credentials() {
+        type(By.id("username"), "testuser");
+        type(By.id("password"), "password123");
+    }
+
+    @When("User enters invalid username or password")
+    public void enter_invalid_credentials() {
+        type(By.id("username"), "wronguser");
+        type(By.id("password"), "wrongpass");
+    }
+
+    @And("User clicks on the login button")
+    public void click_login() {
+        click(By.id("loginBtn"));
+    }
+
+    @Then("User should be redirected to the dashboard")
+    public void verify_dashboard() {
+        String title = getText(By.tagName("h1"));
+        if(!title.equals("Dashboard")) {
+            throw new AssertionError("Dashboard not displayed!");
+        }
+    }
+
+    @Then("User should see an error message")
+    public void verify_error_message() {
+        String msg = getText(By.id("errorMsg"));
+        if(!msg.contains("Invalid credentials")) {
+            throw new AssertionError("Error message not displayed!");
+        }
+    }
+}
