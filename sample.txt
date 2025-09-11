@@ -1,30 +1,9 @@
-package runners;
-
-import io.cucumber.testng.AbstractTestNGCucumberTests;
-import io.cucumber.testng.CucumberOptions;
-import org.testng.annotations.DataProvider;
-
-@CucumberOptions(
-        features = "src/test/resources/features",
-        glue = {"stepdefinitions", "hooks"},
-        plugin = {
-                "pretty",
-                "html:target/cucumber-reports/cucumber-pretty.html",
-                "json:target/json-reports/cucumber.json",
-                "junit:target/xml-reports/cucumber.xml"
-        },
-        monochrome = true,
-        tags = "@smoke"
-)
-public class TestRunner extends AbstractTestNGCucumberTests {
-
-    /**
-     * Enables parallel execution of scenarios.
-     * @return Scenarios to be executed.
-     */
-    @Override
-    @DataProvider(parallel = true)
-    public Object[][] scenarios() {
-        return super.scenarios();
-    }
-}
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE suite SYSTEM "http://testng.org/testng-1.0.dtd">
+<suite name="Command Centre Automation Suite" parallel="tests" thread-count="2">
+    <test name="Automation Tests">
+        <classes>
+            <class name="com.commandcentre.automation.runners.TestRunner"/>
+        </classes>
+    </test>
+</suite>
