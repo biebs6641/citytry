@@ -1,40 +1,43 @@
-package com.mycompany.base;
+package com.mycompany.hooks;
 
 import com.aventstack.extentreports.ExtentReports;
 import com.aventstack.extentreports.ExtentTest;
-import com.aventstack.extentreports.reporter.ExtentSparkReporter;
+import com.mycompany.base.DriverFactory;
+import com.mycompany.base.ExtentManager;
+import com.mycompany.base.ConfigReader;
+import cucumber.api.java.Before;
+import cucumber.api.java.After;
+import cucumber.api.Scenario;
+import org.openqa.selenium.OutputType;
+import org.openqa.selenium.TakesScreenshot;
 
-import java.io.File;
-import java.text.SimpleDateFormat;
-import java.util.Date;
+public class Hooks {
 
-public class ExtentManager {
+    private static ExtentReports extent = ExtentManager.getInstance();
 
-    private static ExtentReports extent;
-    private static ThreadLocal<ExtentTest> test = new ThreadLocal<>();
+    @Before
+    public void beforeScenario(Scenario scenario) {
+        ExtentTest test = extent.createTest(scenario.getName());
+        ExtentManager.setTest(test);
 
-    public static ExtentReports getInstance() {
-        if (extent == null) {
-            String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
-            String reportDir = System.getProperty("user.dir") + "/reports/Run_" + timeStamp + "/";
-            new File(reportDir).mkdirs();
+        String browser = ConfigReader.getProperty("browser");
+        DriverFactory.initDriver(browser);
 
-            ExtentSparkReporter spark = new ExtentSparkReporter(reportDir + "SparkReport.html");
-            extent = new ExtentReports();
-            extent.attachReporter(spark);
+        ExtentManager.getTest().info("Starting scenario: " + scenario.getName());
+    }
 
-            extent.setSystemInfo("OS", System.getProperty("os.name"));
-            extent.setSystemInfo("Java Version", System.getProperty("java.version"));
-            extent.setSystemInfo("User", System.getProperty("user.name"));
+    @After
+    public void afterScenario(Scenario scenario) {
+        if (scenario.isFailed()) {
+            byte[] screenshot = ((TakesScreenshot) DriverFactory.getDriver()).getScreenshotAs(OutputType.BYTES);
+            String base64Screenshot = ((TakesScreenshot) DriverFactory.getDriver()).getScreenshotAs(OutputType.BASE64);
+            ExtentManager.getTest().fail("Scenario Failed: " + scenario.getName())
+                    .addScreenCaptureFromBase64String(base64Screenshot);
+        } else {
+            ExtentManager.getTest().pass("Scenario Passed: " + scenario.getName());
         }
-        return extent;
-    }
 
-    public static ExtentTest getTest() {
-        return test.get();
-    }
-
-    public static void setTest(ExtentTest extentTest) {
-        test.set(extentTest);
+        DriverFactory.quitDriver();
+        extent.flush();
     }
 }
