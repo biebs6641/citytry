@@ -1,46 +1,36 @@
-package com.mycompany.stepdefinitions;
+package com.mycompany.base;
 
-import com.mycompany.base.BaseClass;
-import io.cucumber.java.en.*;
-import org.openqa.selenium.By;
+import com.aventstack.extentreports.ExtentReports;
+import com.aventstack.extentreports.reporter.ExtentHtmlReporter;
+import com.aventstack.extentreports.reporter.configuration.Theme;
 
-public class LoginSteps extends BaseClass {
+public class ExtentManager {
+    private static ExtentReports extent;
 
-    @Given("User is on the login page")
-    public void user_is_on_login_page() {
-        navigateTo("https://example.com/login"); // replace with actual URL
-    }
-
-    @When("User enters valid username and password")
-    public void enter_valid_credentials() {
-        type(By.id("username"), "testuser");
-        type(By.id("password"), "password123");
-    }
-
-    @When("User enters invalid username or password")
-    public void enter_invalid_credentials() {
-        type(By.id("username"), "wronguser");
-        type(By.id("password"), "wrongpass");
-    }
-
-    @And("User clicks on the login button")
-    public void click_login() {
-        click(By.id("loginBtn"));
-    }
-
-    @Then("User should be redirected to the dashboard")
-    public void verify_dashboard() {
-        String title = getText(By.tagName("h1"));
-        if(!title.equals("Dashboard")) {
-            throw new AssertionError("Dashboard not displayed!");
+    public static ExtentReports getInstance() {
+        if (extent == null) {
+            createInstance();
         }
+        return extent;
     }
 
-    @Then("User should see an error message")
-    public void verify_error_message() {
-        String msg = getText(By.id("errorMsg"));
-        if(!msg.contains("Invalid credentials")) {
-            throw new AssertionError("Error message not displayed!");
-        }
+    public static ExtentReports createInstance() {
+        String reportPath = "test-output/ExtentReport.html";
+        ExtentHtmlReporter htmlReporter = new ExtentHtmlReporter(reportPath);
+
+        htmlReporter.config().setDocumentTitle("Automation Report");
+        htmlReporter.config().setReportName("BDD Framework Execution");
+        htmlReporter.config().setTheme(Theme.STANDARD);
+
+        extent = new ExtentReports();
+        extent.attachReporter(htmlReporter);
+
+        // Add system info for better context
+        extent.setSystemInfo("OS", System.getProperty("os.name"));
+        extent.setSystemInfo("Java Version", System.getProperty("java.version"));
+        extent.setSystemInfo("User", System.getProperty("user.name"));
+        extent.setSystemInfo("Browser", ConfigReader.getProperty("browser"));
+
+        return extent;
     }
 }
