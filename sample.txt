@@ -1,7 +1,7 @@
 package com.mycompany.base;
 
 import com.aventstack.extentreports.ExtentReports;
-import com.aventstack.extentreports.reporter.ExtentHtmlReporter;
+import com.aventstack.extentreports.reporter.ExtentSparkReporter;
 import com.aventstack.extentreports.reporter.configuration.Theme;
 
 public class ExtentManager {
@@ -14,18 +14,18 @@ public class ExtentManager {
         return extent;
     }
 
-    public static ExtentReports createInstance() {
+    private static ExtentReports createInstance() {
         String reportPath = "test-output/ExtentReport.html";
-        ExtentHtmlReporter htmlReporter = new ExtentHtmlReporter(reportPath);
+        ExtentSparkReporter spark = new ExtentSparkReporter(reportPath);
 
-        htmlReporter.config().setDocumentTitle("Automation Report");
-        htmlReporter.config().setReportName("BDD Framework Execution");
-        htmlReporter.config().setTheme(Theme.STANDARD);
+        spark.config().setDocumentTitle("Automation Test Report");
+        spark.config().setReportName("BDD Framework Execution Report");
+        spark.config().setTheme(Theme.STANDARD);
 
         extent = new ExtentReports();
-        extent.attachReporter(htmlReporter);
+        extent.attachReporter(spark);
 
-        // Add system info for better context
+        // Add environment/system details
         extent.setSystemInfo("OS", System.getProperty("os.name"));
         extent.setSystemInfo("Java Version", System.getProperty("java.version"));
         extent.setSystemInfo("User", System.getProperty("user.name"));
