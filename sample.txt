@@ -1,34 +1,31 @@
-import com.lowagie.text.Document;
-import com.lowagie.text.PageSize;
-import com.lowagie.text.pdf.PdfWriter;
-import org.xhtmlrenderer.pdf.ITextRenderer;
+ private static final int DEFAULT_TIMEOUT = 10;
 
-import java.io.*;
-
-public class HtmlToPdfConverter {
-
-    public static void convertToPdf(String htmlPath, String pdfPath) {
-        try {
-            String url = new File(htmlPath).toURI().toURL().toString();
-
-            OutputStream os = new FileOutputStream(pdfPath);
-
-            Document document = new Document(PageSize.A4);
-            PdfWriter writer = PdfWriter.getInstance(document, os);
-            document.open();
-
-            ITextRenderer renderer = new ITextRenderer();
-            renderer.setDocument(url);
-            renderer.layout();
-            renderer.createPDF(os);
-
-            document.close();
-            os.close();
-
-            System.out.println("✅ PDF report generated at: " + pdfPath);
-
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+    // Generic wait until element is visible
+    public static WebElement waitForVisibility(WebDriver driver, By locator) {
+        WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(DEFAULT_TIMEOUT));
+        return wait.until(ExpectedConditions.visibilityOfElementLocated(locator));
     }
-}
+
+    // Wait until element is clickable
+    public static WebElement waitForClickable(WebDriver driver, By locator) {
+        WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(DEFAULT_TIMEOUT));
+        return wait.until(ExpectedConditions.elementToBeClickable(locator));
+    }
+
+    // Wait until element is present in DOM (not necessarily visible)
+    public static WebElement waitForPresence(WebDriver driver, By locator) {
+        WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(DEFAULT_TIMEOUT));
+        return wait.until(ExpectedConditions.presenceOfElementLocated(locator));
+    }
+
+    // Wait until element becomes invisible
+    public static boolean waitForInvisibility(WebDriver driver, By locator) {
+        WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(DEFAULT_TIMEOUT));
+        return wait.until(ExpectedConditions.invisibilityOfElementLocated(locator));
+    }
+
+    // Wait for custom timeout (overloaded method)
+    public static WebElement waitForVisibility(WebDriver driver, By locator, int timeoutInSeconds) {
+        WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(timeoutInSeconds));
+        return wait.until(ExpectedConditions.visibilityOfElementLocated(locator));
+    }
