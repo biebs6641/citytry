@@ -1,31 +1,124 @@
- private static final int DEFAULT_TIMEOUT = 10;
+package com.cucumber.base;
 
-    // Generic wait until element is visible
-    public static WebElement waitForVisibility(WebDriver driver, By locator) {
-        WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(DEFAULT_TIMEOUT));
-        return wait.until(ExpectedConditions.visibilityOfElementLocated(locator));
+import org.openqa.selenium.*;
+import org.openqa.selenium.support.ui.ExpectedConditions;
+import org.openqa.selenium.support.ui.WebDriverWait;
+import org.apache.commons.io.FileUtils; // Dependency: Apache Commons IO
+
+import java.io.File;
+import java.io.IOException;
+import java.time.Duration;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+
+// Assuming you have a ReportLogger class for logging
+import com.cucumber.utils.ReportLogger;
+
+public class RevisedBaseClass {
+
+    protected WebDriver driver;
+    protected WebDriverWait wait;
+
+    public RevisedBaseClass() {
+        // Correctly initialize the driver from your factory
+        this.driver = DriverFactory.getDriver();
+        // Set a standard explicit wait time
+        this.wait = new WebDriverWait(driver, Duration.ofSeconds(20));
+        ReportLogger.log("Base Class Initialized. WebDriver session started.");
     }
 
-    // Wait until element is clickable
-    public static WebElement waitForClickable(WebDriver driver, By locator) {
-        WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(DEFAULT_TIMEOUT));
-        return wait.until(ExpectedConditions.elementToBeClickable(locator));
+    /**
+     * Navigates to a specified URL with clear logging.
+     *
+     * @param url The URL to navigate to.
+     */
+    protected void navigateTo(String url) {
+        try {
+            ReportLogger.log("Navigating to URL: " + url);
+            driver.get(url);
+            ReportLogger.log("Successfully navigated to: " + driver.getTitle());
+        } catch (Exception e) {
+            ReportLogger.log("ERROR: Failed to navigate to URL: " + url);
+            takeScreenshotOnFailure("navigateTo_failure");
+            throw e; // Re-throw the exception to fail the test
+        }
     }
 
-    // Wait until element is present in DOM (not necessarily visible)
-    public static WebElement waitForPresence(WebDriver driver, By locator) {
-        WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(DEFAULT_TIMEOUT));
-        return wait.until(ExpectedConditions.presenceOfElementLocated(locator));
+    /**
+     * Clicks an element with built-in waits, logging, and error handling.
+     *
+     * @param locator     The By locator of the element.
+     * @param elementName A human-readable name for the element for logging.
+     */
+    public void click(By locator, String elementName) {
+        try {
+            ReportLogger.log("Attempting to click on: " + elementName);
+            WebElement element = wait.until(ExpectedConditions.elementToBeClickable(locator));
+            element.click();
+            ReportLogger.log("Successfully clicked on: " + elementName);
+        } catch (TimeoutException e) {
+            ReportLogger.log("ERROR: Timed out waiting to click on '" + elementName + "'. Locator: " + locator);
+            takeScreenshotOnFailure("click_failure_" + elementName.replaceAll("\\s+", "_"));
+            throw e; // Re-throw the exception to fail the test
+        }
     }
 
-    // Wait until element becomes invisible
-    public static boolean waitForInvisibility(WebDriver driver, By locator) {
-        WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(DEFAULT_TIMEOUT));
-        return wait.until(ExpectedConditions.invisibilityOfElementLocated(locator));
+    /**
+     * Types text into an element with built-in waits, logging, and error handling.
+     *
+     * @param locator     The By locator of the element.
+     * @param text        The text to type.
+     * @param elementName A human-readable name for the element for logging.
+     */
+    public void type(By locator, String text, String elementName) {
+        try {
+            ReportLogger.log("Attempting to type '" + text + "' into: " + elementName);
+            WebElement element = wait.until(ExpectedConditions.visibilityOfElementLocated(locator));
+            element.clear(); // Best practice to clear the field first
+            element.sendKeys(text);
+            ReportLogger.log("Successfully typed text into: " + elementName);
+        } catch (TimeoutException e) {
+            ReportLogger.log("ERROR: Timed out waiting to type into '" + elementName + "'. Locator: " + locator);
+            takeScreenshotOnFailure("type_failure_" + elementName.replaceAll("\\s+", "_"));
+            throw e; // Re-throw the exception to fail the test
+        }
     }
 
-    // Wait for custom timeout (overloaded method)
-    public static WebElement waitForVisibility(WebDriver driver, By locator, int timeoutInSeconds) {
-        WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(timeoutInSeconds));
-        return wait.until(ExpectedConditions.visibilityOfElementLocated(locator));
+    /**
+     * Retrieves text from an element with logging and error handling.
+     *
+     * @param locator     The By locator of the element.
+     * @param elementName A human-readable name for the element for logging.
+     * @return The text of the element as a String.
+     */
+    public String getText(By locator, String elementName) {
+        try {
+            ReportLogger.log("Attempting to get text from: " + elementName);
+            String text = wait.until(ExpectedConditions.visibilityOfElementLocated(locator)).getText();
+            ReportLogger.log("Retrieved text: '" + text + "' from: " + elementName);
+            return text;
+        } catch (TimeoutException e) {
+            ReportLogger.log("ERROR: Timed out waiting to get text from '" + elementName + "'. Locator: " + locator);
+            takeScreenshotOnFailure("getText_failure_" + elementName.replaceAll("\\s+", "_"));
+            throw e; // Re-throw the exception to fail the test
+        }
     }
+
+    /**
+     * A private helper method to automatically take a screenshot on any failure.
+     *
+     * @param screenshotName The base name for the screenshot file.
+     */
+    private void takeScreenshotOnFailure(String screenshotName) {
+        File scrFile = ((TakesScreenshot) driver).getScreenshotAs(OutputType.FILE);
+        String timestamp = new SimpleDateFormat("yyyy_MM_dd__HH_mm_ss").format(new Date());
+        // Creates a unique path for the screenshot
+        String path = "reports/screenshots/" + screenshotName + "_" + timestamp + ".png";
+        try {
+            FileUtils.copyFile(scrFile, new File(path));
+            ReportLogger.log("Screenshot taken on failure: " + path);
+        } catch (IOException ex) {
+            ReportLogger.log("ERROR: Could not save screenshot. " + ex.getMessage());
+        }
+    }
+}
