@@ -121,4 +121,109 @@ public class RevisedBaseClass {
             ReportLogger.log("ERROR: Could not save screenshot. " + ex.getMessage());
         }
     }
+
+// Add these methods to the RevisedBaseClass.java file we created earlier.
+
+/**
+ * Waits for an element to be visible on the page, using the default timeout.
+ *
+ * @param locator     The By locator of the element.
+ * @param elementName A human-readable name for the element for logging.
+ * @return The WebElement once it is visible.
+ */
+public WebElement waitForVisibility(By locator, String elementName) {
+    try {
+        ReportLogger.log("Waiting for '" + elementName + "' to be visible.");
+        WebElement element = this.wait.until(ExpectedConditions.visibilityOfElementLocated(locator));
+        ReportLogger.log("'" + elementName + "' is visible.");
+        return element;
+    } catch (TimeoutException e) {
+        ReportLogger.log("ERROR: Timed out waiting for '" + elementName + "' to be visible. Locator: " + locator);
+        takeScreenshotOnFailure("visibility_failure_" + elementName.replaceAll("\\s+", "_"));
+        throw e;
+    }
+}
+
+/**
+ * Waits for an element to be clickable, using the default timeout.
+ *
+ * @param locator     The By locator of the element.
+ * @param elementName A human-readable name for the element for logging.
+ * @return The WebElement once it is clickable.
+ */
+public WebElement waitForClickable(By locator, String elementName) {
+    try {
+        ReportLogger.log("Waiting for '" + elementName + "' to be clickable.");
+        WebElement element = this.wait.until(ExpectedConditions.elementToBeClickable(locator));
+        ReportLogger.log("'" + elementName + "' is clickable.");
+        return element;
+    } catch (TimeoutException e) {
+        ReportLogger.log("ERROR: Timed out waiting for '" + elementName + "' to be clickable. Locator: " + locator);
+        takeScreenshotOnFailure("clickable_failure_" + elementName.replaceAll("\\s+", "_"));
+        throw e;
+    }
+}
+
+/**
+ * Waits for an element to be present in the DOM, using the default timeout.
+ *
+ * @param locator     The By locator of the element.
+ * @param elementName A human-readable name for the element for logging.
+ * @return The WebElement once it is present.
+ */
+public WebElement waitForPresence(By locator, String elementName) {
+    try {
+        ReportLogger.log("Waiting for '" + elementName + "' to be present in the DOM.");
+        WebElement element = this.wait.until(ExpectedConditions.presenceOfElementLocated(locator));
+        ReportLogger.log("'" + elementName + "' is present in the DOM.");
+        return element;
+    } catch (TimeoutException e) {
+        ReportLogger.log("ERROR: Timed out waiting for '" + elementName + "' to be present. Locator: " + locator);
+        takeScreenshotOnFailure("presence_failure_" + elementName.replaceAll("\\s+", "_"));
+        throw e;
+    }
+}
+
+/**
+ * Waits for an element to become invisible, using the default timeout.
+ *
+ * @param locator     The By locator of the element.
+ * @param elementName A human-readable name for the element for logging.
+ * @return True if the element becomes invisible within the timeout.
+ */
+public boolean waitForInvisibility(By locator, String elementName) {
+    try {
+        ReportLogger.log("Waiting for '" + elementName + "' to become invisible.");
+        boolean invisible = this.wait.until(ExpectedConditions.invisibilityOfElementLocated(locator));
+        ReportLogger.log("'" + elementName + "' is now invisible.");
+        return invisible;
+    } catch (TimeoutException e) {
+        ReportLogger.log("ERROR: Timed out waiting for '" + elementName + "' to become invisible. It remained visible.");
+        takeScreenshotOnFailure("invisibility_failure_" + elementName.replaceAll("\\s+", "_"));
+        throw e; // Fail the test if the element doesn't disappear as expected
+    }
+}
+
+/**
+ * OVERLOADED METHOD: Waits for an element to be visible, using a custom timeout.
+ *
+ * @param locator          The By locator of the element.
+ * @param elementName      A human-readable name for logging.
+ * @param timeoutInSeconds The custom wait time in seconds.
+ * @return The WebElement once it is visible.
+ */
+public WebElement waitForVisibility(By locator, String elementName, int timeoutInSeconds) {
+    try {
+        ReportLogger.log("Waiting for '" + elementName + "' to be visible (custom timeout: " + timeoutInSeconds + "s).");
+        WebDriverWait customWait = new WebDriverWait(driver, Duration.ofSeconds(timeoutInSeconds));
+        WebElement element = customWait.until(ExpectedConditions.visibilityOfElementLocated(locator));
+        ReportLogger.log("'" + elementName + "' is visible.");
+        return element;
+    } catch (TimeoutException e) {
+        ReportLogger.log("ERROR: Timed out after " + timeoutInSeconds + "s waiting for '" + elementName + "' to be visible.");
+        takeScreenshotOnFailure("visibility_failure_custom_timeout_" + elementName.replaceAll("\\s+", "_"));
+        throw e;
+    }
+}
+
 }
