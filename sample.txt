@@ -1,37 +1,45 @@
-package com.cucumber.base;
+package com.cucumber.utils;
 
 import com.itextpdf.text.*;
 import com.itextpdf.text.pdf.PdfWriter;
+import com.cucumber.base.BaseClass;
 
 import java.io.FileOutputStream;
 import java.util.List;
+import java.util.Map;
 
-public class PdfReportGenerator {
+public class PdfGenerator {
 
-    public static void createPdfFromScreenshots(String outputPdfPath) {
+    public static void generatePdf(String outputPath) {
         try {
             Document document = new Document();
-            PdfWriter.getInstance(document, new FileOutputStream(outputPdfPath));
+            PdfWriter.getInstance(document, new FileOutputStream(outputPath));
             document.open();
 
-            List<String> screenshots = BaseClass.getScreenshotPaths();
+            for (Map.Entry<String, List<String>> entry : BaseClass.scenarioScreenshots.entrySet()) {
+                String scenarioName = entry.getKey();
+                List<String> screenshots = entry.getValue();
 
-            if (!screenshots.isEmpty()) {
-                for (String path : screenshots) {
-                    Image image = Image.getInstance(path);
-                    image.scaleToFit(PageSize.A4.getWidth() - 50, PageSize.A4.getHeight() - 50);
-                    image.setAlignment(Element.ALIGN_CENTER);
+                // Add Scenario Title
+                Paragraph title = new Paragraph("Scenario: " + scenarioName, 
+                        FontFactory.getFont(FontFactory.HELVETICA_BOLD, 14, BaseColor.BLUE));
+                title.setSpacingAfter(10);
+                document.add(title);
 
-                    document.add(new Paragraph("Screenshot: " + new File(path).getName()));
-                    document.add(image);
-                    document.add(Chunk.NEWLINE);
+                // Add each screenshot under the scenario
+                for (String screenshotPath : screenshots) {
+                    Image img = Image.getInstance(screenshotPath);
+                    img.scaleToFit(500, 400);
+                    img.setSpacingAfter(10);
+                    document.add(img);
                 }
-            } else {
-                document.add(new Paragraph("No screenshots captured in this scenario."));
+
+                // Page break between scenarios
+                document.newPage();
             }
 
             document.close();
-            System.out.println("PDF created: " + outputPdfPath);
+            System.out.println("PDF Generated at: " + outputPath);
 
         } catch (Exception e) {
             e.printStackTrace();
