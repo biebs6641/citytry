@@ -1,9 +1,59 @@
-for (Map.Entry<String, List<String>> entry : scenarioScreenshots.entrySet()) {
-    String scenarioName = entry.getKey();
-    List<String> screenshots = entry.getValue();
+public class PdfGenerator {
 
-    System.out.println("Scenario: " + scenarioName);
-    for (String screenshot : screenshots) {
-        System.out.println("   Screenshot: " + screenshot);
+    public static void generatePdf(String outputPath) {
+        try {
+            Document document = new Document();
+            PdfWriter.getInstance(document, new FileOutputStream(outputPath));
+            document.open();
+
+            int scenarioCount = 0;
+            int totalScenarios = BaseClass.scenarioScreenshots.size();
+
+            for (Map.Entry<String, List<String>> entry : BaseClass.scenarioScreenshots.entrySet()) {
+                String scenarioName = entry.getKey();
+                List<String> screenshots = entry.getValue();
+
+                // Scenario title
+                Paragraph title = new Paragraph(
+                        "Scenario: " + scenarioName,
+                        FontFactory.getFont(FontFactory.HELVETICA_BOLD, 14, BaseColor.BLUE)
+                );
+                title.setSpacingBefore(20);
+                title.setSpacingAfter(10);
+                document.add(title);
+
+                // Add all screenshots for this scenario
+                for (String path : screenshots) {
+                    String fileName = new File(path).getName();
+                    String withoutExt = fileName.replace(".png", "");
+                    String[] parts = withoutExt.split("_");
+
+                    // Step name (optional)
+                    if (parts.length >= 2) {
+                        Paragraph step = new Paragraph("Step: " + parts[1],
+                                FontFactory.getFont(FontFactory.HELVETICA, 12, BaseColor.BLACK));
+                        step.setSpacingAfter(5);
+                        document.add(step);
+                    }
+
+                    Image img = Image.getInstance(path);
+                    img.scaleToFit(500, 350);
+                    img.setSpacingAfter(15);
+                    document.add(img);
+                }
+
+                scenarioCount++;
+                if (scenarioCount < totalScenarios) {
+                    // ✅ Add a page break only after finishing scenario
+                    document.newPage();
+                }
+            }
+
+            document.close();
+            System.out.println("✅ PDF generated at: " + outputPath);
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 }
