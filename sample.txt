@@ -1,48 +1,9 @@
-package com.cucumber.utils;
+for (Map.Entry<String, List<String>> entry : scenarioScreenshots.entrySet()) {
+    String scenarioName = entry.getKey();
+    List<String> screenshots = entry.getValue();
 
-import com.cucumber.base.BaseClass;
-import com.itextpdf.text.*;
-import com.itextpdf.text.pdf.PdfWriter;
-
-import java.io.FileOutputStream;
-import java.util.List;
-import java.util.Map;
-
-public class PdfGenerator {
-
-    public static void generatePdf(String outputPath) {
-        try {
-            Document document = new Document();
-            PdfWriter.getInstance(document, new FileOutputStream(outputPath));
-            document.open();
-
-            for (Map.Entry<String, List<String>> entry : BaseClass.scenarioScreenshots.entrySet()) {
-                String scenarioName = entry.getKey();
-                List<String> screenshots = entry.getValue();
-
-                // Scenario title
-                Paragraph title = new Paragraph("Scenario: " + scenarioName,
-                        FontFactory.getFont(FontFactory.HELVETICA_BOLD, 14, BaseColor.BLUE));
-                title.setSpacingAfter(10);
-                document.add(title);
-
-                // Add all screenshots for this scenario
-                for (String path : screenshots) {
-                    Image img = Image.getInstance(path);
-                    img.scaleToFit(500, 400);
-                    img.setSpacingAfter(10);
-                    document.add(img);
-                }
-
-                // Page break after each scenario
-                document.newPage();
-            }
-
-            document.close();
-            System.out.println("PDF generated at: " + outputPath);
-
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+    System.out.println("Scenario: " + scenarioName);
+    for (String screenshot : screenshots) {
+        System.out.println("   Screenshot: " + screenshot);
     }
 }
