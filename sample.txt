@@ -1,8 +1,8 @@
 package com.cucumber.utils;
 
+import com.cucumber.base.BaseClass;
 import com.itextpdf.text.*;
 import com.itextpdf.text.pdf.PdfWriter;
-import com.cucumber.base.BaseClass;
 
 import java.io.FileOutputStream;
 import java.util.List;
@@ -20,26 +20,26 @@ public class PdfGenerator {
                 String scenarioName = entry.getKey();
                 List<String> screenshots = entry.getValue();
 
-                // Add Scenario Title
-                Paragraph title = new Paragraph("Scenario: " + scenarioName, 
+                // Scenario title
+                Paragraph title = new Paragraph("Scenario: " + scenarioName,
                         FontFactory.getFont(FontFactory.HELVETICA_BOLD, 14, BaseColor.BLUE));
                 title.setSpacingAfter(10);
                 document.add(title);
 
-                // Add each screenshot under the scenario
-                for (String screenshotPath : screenshots) {
-                    Image img = Image.getInstance(screenshotPath);
+                // Add all screenshots for this scenario
+                for (String path : screenshots) {
+                    Image img = Image.getInstance(path);
                     img.scaleToFit(500, 400);
                     img.setSpacingAfter(10);
                     document.add(img);
                 }
 
-                // Page break between scenarios
+                // Page break after each scenario
                 document.newPage();
             }
 
             document.close();
-            System.out.println("PDF Generated at: " + outputPath);
+            System.out.println("PDF generated at: " + outputPath);
 
         } catch (Exception e) {
             e.printStackTrace();
