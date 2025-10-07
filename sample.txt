@@ -1,28 +1,34 @@
+import org.openqa.selenium.By;
+import org.openqa.selenium.WebDriver;
+import org.openqa.selenium.WebElement;
+import org.openqa.selenium.TimeoutException;
+import org.openqa.selenium.support.ui.ExpectedConditions;
+import org.openqa.selenium.support.ui.WebDriverWait;
+import java.time.Duration;
+
+// ... inside your class
+
 /**
- * Waits for an element to be clickable, clears its content, and types the given text.
+ * Waits for an element to be clickable and then clicks it.
  *
  * @param locator The By locator of the web element.
- * @param text The text to type into the element.
+ * @param elementName A human-readable name for logging purposes.
  */
-public void type(By locator, String text) {
+public void click(By locator, String elementName) {
     try {
-        // Wait for the element to be present, visible, AND enabled.
+        // Use the best wait condition: element is present, visible, AND enabled.
         WebElement element = new WebDriverWait(driver, Duration.ofSeconds(10))
                 .until(ExpectedConditions.elementToBeClickable(locator));
 
-        // Use the reliable key-combination to clear the field.
-        element.sendKeys(Keys.CONTROL + "a");
-        element.sendKeys(Keys.DELETE);
-
-        // Type the desired text.
-        element.sendKeys(text);
+        element.click();
         
-        // Optional: Log a success message for detailed reporting.
-        // ExtentManager.getTest().pass("Successfully typed '" + text + "' into " + locator);
+        // Optional: Log success for detailed reports
+        // ExtentManager.getTest().pass("Successfully clicked on: " + elementName);
 
     } catch (TimeoutException e) {
-        // Log a descriptive failure message and fail the test.
-        ExtentManager.getTest().fail("ERROR: Timed out waiting to type into element: " + locator);
-        throw e; // Re-throw to ensure test execution stops.
+        // Log a descriptive failure message
+        // ExtentManager.getTest().fail("ERROR: Timed out waiting to click on '" + elementName + "'. Locator: " + locator);
+        System.out.println("ERROR: Timed out waiting to click on '" + elementName + "'. Locator: " + locator);
+        throw e; // Re-throw to ensure the test fails
     }
 }
