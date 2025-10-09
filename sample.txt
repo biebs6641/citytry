@@ -1,34 +1,37 @@
-import org.openqa.selenium.By;
-import org.openqa.selenium.WebDriver;
-import org.openqa.selenium.WebElement;
-import org.openqa.selenium.TimeoutException;
+import com.aventstack.extentreports.Status;
+import org.openqa.selenium.*;
 import org.openqa.selenium.support.ui.ExpectedConditions;
 import org.openqa.selenium.support.ui.WebDriverWait;
 import java.time.Duration;
 
-// ... inside your class
+public class BasePage {
 
-/**
- * Waits for an element to be clickable and then clicks it.
- *
- * @param locator The By locator of the web element.
- * @param elementName A human-readable name for logging purposes.
- */
-public void click(By locator, String elementName) {
-    try {
-        // Use the best wait condition: element is present, visible, AND enabled.
-        WebElement element = new WebDriverWait(driver, Duration.ofSeconds(10))
-                .until(ExpectedConditions.elementToBeClickable(locator));
+    protected WebDriver driver;
+    protected WebDriverWait wait;
 
-        element.click();
-        
-        // Optional: Log success for detailed reports
-        // ExtentManager.getTest().pass("Successfully clicked on: " + elementName);
+    public BasePage(WebDriver webDriver) {
+        this.driver = webDriver;
+        this.wait = new WebDriverWait(driver, Duration.ofSeconds(10));
+    }
 
-    } catch (TimeoutException e) {
-        // Log a descriptive failure message
-        // ExtentManager.getTest().fail("ERROR: Timed out waiting to click on '" + elementName + "'. Locator: " + locator);
-        System.out.println("ERROR: Timed out waiting to click on '" + elementName + "'. Locator: " + locator);
-        throw e; // Re-throw to ensure the test fails
+    /**
+     * Universal element presence validation method.
+     * Logs pass/fail in Extent report (no screenshots).
+     */
+    public boolean validateElementPresence(By locator, String elementName) {
+        try {
+            wait.until(ExpectedConditions.presenceOfElementLocated(locator));
+            ExtentManager.getTest().log(Status.PASS, "✅ Element found: " + elementName);
+            return true;
+
+        } catch (TimeoutException e) {
+            ExtentManager.getTest().log(Status.FAIL, "❌ Element not found: " + elementName);
+            return false;
+
+        } catch (Exception e) {
+            ExtentManager.getTest().log(Status.FAIL, 
+                "⚠️ Error validating element: " + elementName + " - " + e.getMessage());
+            return false;
+        }
     }
 }
