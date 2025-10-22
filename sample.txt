@@ -1,7 +1,9 @@
+// Wait until element exists
 WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(10));
-wait.until(driver -> ((JavascriptExecutor) driver).executeScript(
-    "return document.getElementById('element_id') !== null;"
-));
+WebElement selectDiv = wait.until(driver -> driver.findElement(By.id("cc_member_search_search_bar_select")));
+
+// Scroll into view and click via JS
 ((JavascriptExecutor) driver).executeScript(
-    "var el = document.getElementById('element_id'); el.scrollIntoView({behavior:'smooth', block:'center'}); el.click();"
+    "arguments[0].scrollIntoView({block:'center'});" +
+    "arguments[0].click();", selectDiv
 );
