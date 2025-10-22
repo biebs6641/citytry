@@ -1,22 +1,7 @@
 WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(10));
-wait.until(driver1 -> ((JavascriptExecutor) driver1)
-    .executeScript("return document.getElementById('cc_member_search_search_bar_select') !== null;")
+wait.until(driver -> ((JavascriptExecutor) driver).executeScript(
+    "return document.getElementById('element_id') !== null;"
+));
+((JavascriptExecutor) driver).executeScript(
+    "var el = document.getElementById('element_id'); el.scrollIntoView({behavior:'smooth', block:'center'}); el.click();"
 );
-
-((JavascriptExecutor) driver)
-    .executeScript("document.getElementById('cc_member_search_search_bar_select').click();");
-
-
-
-
-
-
-
-
-
-jakksks
-
-
-
-((JavascriptExecutor) driver)
-    .executeScript("document.getElementById('cc_member_search_search_bar_select').click();");
