@@ -1,56 +1,22 @@
-package com.selenium.automation.webdriver.utils;
+WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(10));
+wait.until(driver1 -> ((JavascriptExecutor) driver1)
+    .executeScript("return document.getElementById('cc_member_search_search_bar_select') !== null;")
+);
 
-import org.openqa.selenium.*;
-import org.openqa.selenium.support.ui.ExpectedConditions;
-import org.openqa.selenium.support.ui.WebDriverWait;
+((JavascriptExecutor) driver)
+    .executeScript("document.getElementById('cc_member_search_search_bar_select').click();");
 
-import java.time.Duration;
 
-/**
- * Utility to highlight elements during test execution.
- * Useful for debugging or taking screenshots.
- */
-public class Highlighter {
 
-    private final WebDriver driver;
-    private final WebDriverWait wait;
-    private final JavascriptExecutor jsExecutor;
 
-    public Highlighter(WebDriver driver) {
-        this.driver = driver;
-        this.wait = new WebDriverWait(driver, Duration.ofSeconds(10));
-        this.jsExecutor = (JavascriptExecutor) driver;
-    }
 
-    /**
-     * Highlights the element with a red border and yellow background.
-     */
-    public void highlight(By locator) {
-        try {
-            WebElement element = wait.until(ExpectedConditions.presenceOfElementLocated(locator));
-            jsExecutor.executeScript(
-                    "arguments[0].setAttribute('data-original-style', arguments[0].getAttribute('style')); " +
-                    "arguments[0].style.border='3px solid red'; " +
-                    "arguments[0].style.backgroundColor='yellow';",
-                    element);
-        } catch (TimeoutException e) {
-            System.out.println("Element not found for highlighting: " + locator);
-        }
-    }
 
-    /**
-     * Removes the highlight by restoring the original style.
-     */
-    public void unhighlight(By locator) {
-        try {
-            WebElement element = driver.findElement(locator);
-            jsExecutor.executeScript(
-                    "if (arguments[0].hasAttribute('data-original-style')) {" +
-                    "arguments[0].setAttribute('style', arguments[0].getAttribute('data-original-style'));" +
-                    "arguments[0].removeAttribute('data-original-style'); }",
-                    element);
-        } catch (NoSuchElementException e) {
-            System.out.println("Element not found for unhighlighting: " + locator);
-        }
-    }
-}
+
+
+
+jakksks
+
+
+
+((JavascriptExecutor) driver)
+    .executeScript("document.getElementById('cc_member_search_search_bar_select').click();");
