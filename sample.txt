@@ -1,11 +1,48 @@
-private void waitForDOMToSettle(int milliseconds) {
-    try {
-        long endTime = System.currentTimeMillis() + milliseconds;
-        while (System.currentTimeMillis() < endTime) {
-            ((JavascriptExecutor) webDriver).executeScript("return document.readyState").equals("complete");
-            Thread.sleep(100);
+import org.openqa.selenium.JavascriptExecutor;
+import org.openqa.selenium.WebDriver;
+
+public class ScrollScreenshotUtil {
+
+    /**
+     * Scrolls through the entire page and takes screenshots using ReportLogger.logWithScreenshot().
+     *
+     * @param driver          WebDriver instance
+     * @param scrollPauseTime time to wait between scrolls (in milliseconds)
+     */
+    public static void captureFullPageScreenshots(WebDriver driver, int scrollPauseTime) {
+        JavascriptExecutor js = (JavascriptExecutor) driver;
+
+        long scrollHeight = (Long) js.executeScript("return document.body.scrollHeight");
+        long clientHeight = (Long) js.executeScript("return window.innerHeight");
+
+        long currentPosition = 0;
+        int screenshotCount = 1;
+
+        System.out.println("Starting full page scroll...");
+
+        while (currentPosition < scrollHeight) {
+            // Take screenshot via your logger
+            String screenshotName = "ScrollShot_" + screenshotCount;
+            ReportLogger.logWithScreenshot(screenshotName);
+            screenshotCount++;
+
+            // Scroll down by one viewport height
+            js.executeScript("window.scrollBy(0, arguments[0]);", clientHeight);
+            currentPosition += clientHeight;
+
+            // Wait for page elements to load
+            try {
+                Thread.sleep(scrollPauseTime);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+
+            // Update scroll height if new content loads dynamically
+            scrollHeight = (Long) js.executeScript("return document.body.scrollHeight");
         }
-    } catch (InterruptedException e) {
-        // Ignore
+
+        // Final screenshot at the bottom
+        ReportLogger.logWithScreenshot("ScrollShot_Final");
+        System.out.println("Full page screenshots completed. Total shots: " + screenshotCount);
     }
 }
