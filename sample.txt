@@ -1,23 +1,11 @@
-public void scrollToElement(By locator) {
+private void waitForDOMToSettle(int milliseconds) {
     try {
-        // Wait for the element to be present
-        WebElement element = driverWait.waitShort()
-                .until(ExpectedConditions.presenceOfElementLocated(locator));
-
-        // Scroll the element into view
-        JavascriptExecutor executor = (JavascriptExecutor) webDriver;
-        executor.executeScript("arguments[0].scrollIntoView(true);", element);
-
-        // Log success
-        ReportLogger.log("Scrolled to element successfully: " + locator.toString());
-    } catch (TimeoutException e) {
-        // Element not found within wait time
-        ReportLogger.log("❌ Failed: Element not found for locator - " + locator.toString());
-    } catch (NoSuchElementException e) {
-        // Element not found at all
-        ReportLogger.log("❌ Failed: No such element found - " + locator.toString());
-    } catch (Exception e) {
-        // Any other unexpected error
-        ReportLogger.log("❌ Exception while scrolling to element: " + e.getMessage());
+        long endTime = System.currentTimeMillis() + milliseconds;
+        while (System.currentTimeMillis() < endTime) {
+            ((JavascriptExecutor) webDriver).executeScript("return document.readyState").equals("complete");
+            Thread.sleep(100);
+        }
+    } catch (InterruptedException e) {
+        // Ignore
     }
 }
