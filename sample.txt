@@ -4,12 +4,14 @@ import org.openqa.selenium.WebDriver;
 public class ScrollScreenshotUtil {
 
     /**
-     * Scrolls through the entire page and takes screenshots using ReportLogger.logWithScreenshot().
+     * Smoothly scrolls down the page while taking screenshots via ReportLogger.logWithScreenshot(),
+     * then scrolls back up to the top smoothly.
      *
      * @param driver          WebDriver instance
-     * @param scrollPauseTime time to wait between scrolls (in milliseconds)
+     * @param scrollPauseTime pause time (in ms) between viewport screenshots
+     * @param scrollStep      pixels to move per smooth step (e.g. 200)
      */
-    public static void captureFullPageScreenshots(WebDriver driver, int scrollPauseTime) {
+    public static void captureFullPageScreenshots(WebDriver driver, int scrollPauseTime, int scrollStep) {
         JavascriptExecutor js = (JavascriptExecutor) driver;
 
         long scrollHeight = (Long) js.executeScript("return document.body.scrollHeight");
@@ -18,31 +20,53 @@ public class ScrollScreenshotUtil {
         long currentPosition = 0;
         int screenshotCount = 1;
 
-        System.out.println("Starting full page scroll...");
+        System.out.println("Starting smooth scroll down with screenshots...");
 
+        // 🔽 SCROLL DOWN
         while (currentPosition < scrollHeight) {
-            // Take screenshot via your logger
             String screenshotName = "ScrollShot_" + screenshotCount;
             ReportLogger.logWithScreenshot(screenshotName);
             screenshotCount++;
 
-            // Scroll down by one viewport height
-            js.executeScript("window.scrollBy(0, arguments[0]);", clientHeight);
-            currentPosition += clientHeight;
+            long targetPosition = currentPosition + clientHeight;
 
-            // Wait for page elements to load
+            // Smooth scroll step-by-step
+            for (long y = currentPosition; y < targetPosition && y < scrollHeight; y += scrollStep) {
+                js.executeScript("window.scrollTo(0, arguments[0]);", y);
+                try {
+                    Thread.sleep(50);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                }
+            }
+
+            // Wait for lazy-loaded content
             try {
                 Thread.sleep(scrollPauseTime);
             } catch (InterruptedException e) {
-                e.printStackTrace();
+                Thread.currentThread().interrupt();
             }
 
-            // Update scroll height if new content loads dynamically
-            scrollHeight = (Long) js.executeScript("return document.body.scrollHeight");
+            // Update position and page height (dynamic handling)
+            currentPosition = ((Number) js.executeScript("return window.pageYOffset;")).longValue();
+            scrollHeight = ((Number) js.executeScript("return document.body.scrollHeight;")).longValue();
         }
 
-        // Final screenshot at the bottom
+        // Final screenshot at the very bottom
         ReportLogger.logWithScreenshot("ScrollShot_Final");
-        System.out.println("Full page screenshots completed. Total shots: " + screenshotCount);
+        System.out.println("Reached bottom of page. Total screenshots: " + screenshotCount);
+
+        // 🔼 SCROLL UP
+        System.out.println("Scrolling smoothly back to top...");
+        for (long y = scrollHeight; y >= 0; y -= scrollStep) {
+            js.executeScript("window.scrollTo(0, arguments[0]);", y);
+            try {
+                Thread.sleep(30); // slightly faster scroll up
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+        }
+
+        System.out.println("Scroll up complete.");
     }
 }
