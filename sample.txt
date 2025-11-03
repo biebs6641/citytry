@@ -1,75 +1,57 @@
-import org.openqa.selenium.JavascriptExecutor;
-import org.openqa.selenium.WebDriver;
-
-public class ScrollScreenshotUtil {
-
-    public static void captureFullPageScreenshots(WebDriver driver, int scrollPauseTime, int scrollStep) {
+/**
+     * Scrolls down the page in increments, pausing after each scroll
+     * and printing the scroll number.
+     *
+     * @param driver The WebDriver instance to use.
+     * @param scrollStepPixels The number of pixels to scroll in each step.
+     * @param pauseMillis The time to pause after each scroll, in milliseconds (e.g., 1000 for 1 second).
+     */
+    public static void scrollPageInSteps(WebDriver driver, int scrollStepPixels, int pauseMillis) {
+        // Cast the driver to JavascriptExecutor
         JavascriptExecutor js = (JavascriptExecutor) driver;
 
-        long scrollHeight = ((Number) js.executeScript("return document.body.scrollHeight")).longValue();
-        long clientHeight = ((Number) js.executeScript("return window.innerHeight")).longValue();
-
-        long currentPosition = 0;
-        int screenshotCount = 1;
-
-        System.out.println("Starting smooth scroll down with screenshots...");
-
-        // 🔽 SCROLL DOWN
-        while (currentPosition < scrollHeight) {
-            String screenshotName = "ScrollShot_" + screenshotCount;
-            ReportLogger.logWithScreenshot(screenshotName);
-            screenshotCount++;
-
-            long targetPosition = currentPosition + clientHeight;
-
-            // Smooth scroll step-by-step
-            for (long y = currentPosition; y < targetPosition && y < scrollHeight; y += scrollStep) {
-                js.executeScript("window.scrollTo(0, arguments[0]);", y);
-                try {
-                    Thread.sleep(50);
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                }
-            }
-
-            // Pause to let new content load
-            try {
-                Thread.sleep(scrollPauseTime);
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-            }
-
-            // Update positions dynamically
-            currentPosition = ((Number) js.executeScript("return window.pageYOffset;")).longValue();
-            scrollHeight = ((Number) js.executeScript("return document.body.scrollHeight;")).longValue();
-        }
-
-        // Final screenshot at bottom
-        ReportLogger.logWithScreenshot("ScrollShot_Final");
-        System.out.println("Reached bottom. Total screenshots: " + screenshotCount);
-
-        // Short wait before scrolling up
         try {
-            Thread.sleep(1000);
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-        }
+            // Get the total height of the page
+            long pageHeight = (Long) js.executeScript("return document.body.scrollHeight");
+            long currentScroll = 0;
+            int scrollNumber = 1;
 
-        // 🔼 SCROLL UP
-        System.out.println("Scrolling smoothly back to top...");
+            System.out.println("Starting scroll. Total page height: " + pageHeight + "px");
 
-        long currentYOffset = ((Number) js.executeScript("return window.pageYOffset;")).longValue();
-        while (currentYOffset > 0) {
-            currentYOffset -= scrollStep;
-            if (currentYOffset < 0) currentYOffset = 0; // prevent negative scroll
-            js.executeScript("window.scrollTo(0, arguments[0]);", currentYOffset);
-            try {
-                Thread.sleep(30); // fast but smooth upward scroll
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
+            // Loop while the current scroll position is less than the total page height
+            while (currentScroll < pageHeight) {
+                // Scroll down by the specified step
+                js.executeScript("window.scrollBy(0, " + scrollStepPixels + ");");
+
+                // Wait for the specified pause duration
+                Thread.sleep(pauseMillis);
+
+                // Print the scroll number *before* checking the new position
+                System.out.println("Scroll number: " + scrollNumber);
+                scrollNumber++;
+
+                // Get the new scroll position
+                long newScrollPosition = (Long) js.executeScript("return window.pageYOffset;");
+
+                // Check if we've reached the bottom
+                // 1. If the new position is the same as the old, we're stuck (at the bottom)
+                // 2. If the new position plus window height is >= page height, we're at the bottom
+                long windowHeight = (Long) js.executeScript("return window.innerHeight");
+
+                if (newScrollPosition == currentScroll || (newScrollPosition + windowHeight) >= pageHeight) {
+                    System.out.println("Reached the bottom of the page.");
+                    break; // Exit the loop
+                }
+
+                // Update the current scroll position for the next loop
+                currentScroll = newScrollPosition;
             }
-        }
 
-        System.out.println("Smooth scroll up completed successfully ✅");
+        } catch (InterruptedException e) {
+            System.err.println("Scroll loop was interrupted.");
+            Thread.currentThread().interrupt(); // Restore the interrupted status
+        } catch (Exception e) {
+            System.err.println("An error occurred during scrolling: " + e.getMessage());
+            e.printStackTrace();
+        }
     }
-}
