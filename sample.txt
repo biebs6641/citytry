@@ -1,16 +1,25 @@
-/**
-     * Scrolls down the page in increments, pausing after each scroll
-     * and printing the scroll number.
+    /**
+     * Scrolls down the page in increments, taking a screenshot before starting
+     * and after each scroll step.
      *
      * @param driver The WebDriver instance to use.
      * @param scrollStepPixels The number of pixels to scroll in each step.
-     * @param pauseMillis The time to pause after each scroll, in milliseconds (e.g., 1000 for 1 second).
+     * @param pauseMillis The time to pause after each scroll, in milliseconds.
+     * @param screenshotDirectory The folder path where screenshots will be saved (e.g., "./screenshots").
      */
-    public static void scrollPageInSteps(WebDriver driver, int scrollStepPixels, int pauseMillis) {
-        // Cast the driver to JavascriptExecutor
+    public static void scrollAndTakeScreenshots(WebDriver driver, int scrollStepPixels, int pauseMillis, String screenshotDirectory) {
+        
         JavascriptExecutor js = (JavascriptExecutor) driver;
 
+        // Create a unique timestamp for this scrolling session
+        String timestamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
+        
         try {
+            // --- 1. Take initial screenshot before scrolling ---
+            System.out.println("Taking initial screenshot...");
+            String initialFileName = String.format("%s_scroll_00_initial.png", timestamp);
+            takeScreenshot(driver, screenshotDirectory, initialFileName);
+
             // Get the total height of the page
             long pageHeight = (Long) js.executeScript("return document.body.scrollHeight");
             long currentScroll = 0;
@@ -18,7 +27,6 @@
 
             System.out.println("Starting scroll. Total page height: " + pageHeight + "px");
 
-            // Loop while the current scroll position is less than the total page height
             while (currentScroll < pageHeight) {
                 // Scroll down by the specified step
                 js.executeScript("window.scrollBy(0, " + scrollStepPixels + ");");
@@ -26,30 +34,27 @@
                 // Wait for the specified pause duration
                 Thread.sleep(pauseMillis);
 
-                // Print the scroll number *before* checking the new position
+                // --- 2. Take screenshot after each scroll ---
                 System.out.println("Scroll number: " + scrollNumber);
+                StringfileName = String.format("%s_scroll_%02d.png", timestamp, scrollNumber);
+                takeScreenshot(driver, screenshotDirectory, fileName);
+                
                 scrollNumber++;
 
-                // Get the new scroll position
+                // --- Check if we've reached the bottom ---
                 long newScrollPosition = (Long) js.executeScript("return window.pageYOffset;");
-
-                // Check if we've reached the bottom
-                // 1. If the new position is the same as the old, we're stuck (at the bottom)
-                // 2. If the new position plus window height is >= page height, we're at the bottom
                 long windowHeight = (Long) js.executeScript("return window.innerHeight");
 
                 if (newScrollPosition == currentScroll || (newScrollPosition + windowHeight) >= pageHeight) {
                     System.out.println("Reached the bottom of the page.");
-                    break; // Exit the loop
+                    break;
                 }
-
-                // Update the current scroll position for the next loop
                 currentScroll = newScrollPosition;
             }
 
         } catch (InterruptedException e) {
             System.err.println("Scroll loop was interrupted.");
-            Thread.currentThread().interrupt(); // Restore the interrupted status
+            Thread.currentThread().interrupt();
         } catch (Exception e) {
             System.err.println("An error occurred during scrolling: " + e.getMessage());
             e.printStackTrace();
