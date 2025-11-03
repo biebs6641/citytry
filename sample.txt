@@ -1,9 +1,23 @@
-// Wait until element exists
-WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(10));
-WebElement selectDiv = wait.until(driver -> driver.findElement(By.id("cc_member_search_search_bar_select")));
+public void scrollToElement(By locator) {
+    try {
+        // Wait for the element to be present
+        WebElement element = driverWait.waitShort()
+                .until(ExpectedConditions.presenceOfElementLocated(locator));
 
-// Scroll into view and click via JS
-((JavascriptExecutor) driver).executeScript(
-    "arguments[0].scrollIntoView({block:'center'});" +
-    "arguments[0].click();", selectDiv
-);
+        // Scroll the element into view
+        JavascriptExecutor executor = (JavascriptExecutor) webDriver;
+        executor.executeScript("arguments[0].scrollIntoView(true);", element);
+
+        // Log success
+        ReportLogger.log("Scrolled to element successfully: " + locator.toString());
+    } catch (TimeoutException e) {
+        // Element not found within wait time
+        ReportLogger.log("❌ Failed: Element not found for locator - " + locator.toString());
+    } catch (NoSuchElementException e) {
+        // Element not found at all
+        ReportLogger.log("❌ Failed: No such element found - " + locator.toString());
+    } catch (Exception e) {
+        // Any other unexpected error
+        ReportLogger.log("❌ Exception while scrolling to element: " + e.getMessage());
+    }
+}
