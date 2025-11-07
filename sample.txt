@@ -1,12 +1,54 @@
+public boolean isWidgetRendered(By locator) {
+    try {
+        WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(15));
 
-var el = document.evaluate("//input[@id='your-id']", document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue;
+        // 1. Element present in DOM
+        WebElement element = wait.until(ExpectedConditions.presenceOfElementLocated(locator));
 
-el.style.outline = "3px solid red";
-el.style.backgroundColor = "yellow";
+        // 2. Element visible & has non-zero size
+        wait.until(ExpectedConditions.visibilityOfElementLocated(locator));
 
+        if (element.getSize().getHeight() <= 1 || element.getSize().getWidth() <= 1) {
+            System.out.println("❌ Element found but size is 0 — not rendered properly.");
+            return false;
+        }
 
+        // 3. Check opacity, display, visibility CSS
+        String display = element.getCssValue("display");
+        String visibility = element.getCssValue("visibility");
+        String opacity = element.getCssValue("opacity");
 
-+(₹+₹+₹(
-var el = document.getElementById("yourId");
-el.style.outline = "3px solid red";
-el.style.backgroundColor = "yellow";
+        if (display.equals("none") || visibility.equals("hidden") || opacity.equals("0")) {
+            System.out.println("❌ Element hidden through CSS.");
+            return false;
+        }
+
+        // 4. Check Clickable if it’s a clickable widget (NOT mandatory)
+        try {
+            wait.until(ExpectedConditions.elementToBeClickable(locator));
+        } catch (Exception ignored) {
+            // Not clickable — but may still be a rendered widget (div, text, container)
+        }
+
+        // 5. Check not covered by overlay
+        JavascriptExecutor js = (JavascriptExecutor) driver;
+        boolean hasOverlay = (Boolean) js.executeScript(
+                "var elem = arguments[0];" +
+                "var rect = elem.getBoundingClientRect();" +
+                "var x = rect.left + rect.width / 2;" +
+                "var y = rect.top + rect.height / 2;" +
+                "return document.elementFromPoint(x, y) !== elem;", element);
+
+        if (hasOverlay) {
+            System.out.println("❌ Widget is overlapped by another element.");
+            return false;
+        }
+
+        // ✅ Everything passed → widget is properly rendered
+        return true;
+
+    } catch (Exception e) {
+        System.out.println("❌ Widget failed to render: " + e.getMessage());
+        return false;
+    }
+}
