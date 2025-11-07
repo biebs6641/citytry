@@ -1,24 +1,28 @@
-public void highlight(By locator) {
+public void unhighlight(By locator) {
     try {
         WebElement element = wait.until(
                 ExpectedConditions.presenceOfElementLocated(locator));
 
         jsExecutor.executeScript(
             "const el = arguments[0];" +
-            "el.style.backgroundColor='yellow';" +
-            "el.style.color='black';" +
-            "el.style.outline='3px solid red';" +
 
-            // apply text color + background to all inner child elements
+            // restore main element
+            "if (el.hasAttribute('data-original-style')) {" +
+            "   el.setAttribute('style', el.getAttribute('data-original-style'));" +
+            "   el.removeAttribute('data-original-style');" +
+            "}" +
+
+            // restore children
             "const children = el.querySelectorAll('*');" +
             "children.forEach(c => {" +
-            "   c.style.backgroundColor='yellow';" +
-            "   c.style.color='black';" +
+            "   if (c.hasAttribute('data-original-style')) {" +
+            "       c.setAttribute('style', c.getAttribute('data-original-style'));" +
+            "       c.removeAttribute('data-original-style');" +
+            "   }" +
             "});"
-            , element
-        );
+            , element);
 
     } catch (TimeoutException e) {
-        System.out.println(\"Element not found for highlighting: \" + locator);
+        System.out.println("Element not found for unhighlighting: " + locator);
     }
 }
