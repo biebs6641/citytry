@@ -1,20 +1,38 @@
 public void safeClick(By locator) {
+
     try {
-        waitForLoaderToDisappear();
+        // Wait for loader to disappear (safe optional wait)
+        try {
+            WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(10));
+            wait.until(ExpectedConditions.invisibilityOfElementLocated(By.cssSelector(".loading-icon")));
+        } catch (Exception ignore) {
+            // If loader not found, continue
+        }
 
-        WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(10));
+        WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(15));
 
-        // Re-find element each time to avoid stale element issues
+        // Wait for element to be clickable
         WebElement element = wait.until(ExpectedConditions.elementToBeClickable(locator));
 
-        safeScroll(element);
+        // Scroll into view
+        ((JavascriptExecutor) driver).executeScript(
+                "arguments[0].scrollIntoView({behavior:'smooth', block:'center'});",
+                element
+        );
 
+        // Normal click attempt
         element.click();
 
     } catch (ElementClickInterceptedException e) {
 
-        // fallback — recapture element and click via JS
+        // JS click fallback
         WebElement element = driver.findElement(locator);
-        jsClick(element);
+        ((JavascriptExecutor) driver).executeScript("arguments[0].click();", element);
+
+    } catch (Exception e) {
+
+        // Final fallback: JS click
+        WebElement element = driver.findElement(locator);
+        ((JavascriptExecutor) driver).executeScript("arguments[0].click();", element);
     }
 }
