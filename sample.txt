@@ -1,62 +1,12 @@
-    /**
-     * Scrolls down the page in increments, taking a screenshot before starting
-     * and after each scroll step.
-     *
-     * @param driver The WebDriver instance to use.
-     * @param scrollStepPixels The number of pixels to scroll in each step.
-     * @param pauseMillis The time to pause after each scroll, in milliseconds.
-     * @param screenshotDirectory The folder path where screenshots will be saved (e.g., "./screenshots").
-     */
-    public static void scrollAndTakeScreenshots(WebDriver driver, int scrollStepPixels, int pauseMillis, String screenshotDirectory) {
-        
-        JavascriptExecutor js = (JavascriptExecutor) driver;
 
-        // Create a unique timestamp for this scrolling session
-        String timestamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
-        
-        try {
-            // --- 1. Take initial screenshot before scrolling ---
-            System.out.println("Taking initial screenshot...");
-            String initialFileName = String.format("%s_scroll_00_initial.png", timestamp);
-            takeScreenshot(driver, screenshotDirectory, initialFileName);
+var el = document.evaluate("//input[@id='your-id']", document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue;
 
-            // Get the total height of the page
-            long pageHeight = (Long) js.executeScript("return document.body.scrollHeight");
-            long currentScroll = 0;
-            int scrollNumber = 1;
+el.style.outline = "3px solid red";
+el.style.backgroundColor = "yellow";
 
-            System.out.println("Starting scroll. Total page height: " + pageHeight + "px");
 
-            while (currentScroll < pageHeight) {
-                // Scroll down by the specified step
-                js.executeScript("window.scrollBy(0, " + scrollStepPixels + ");");
 
-                // Wait for the specified pause duration
-                Thread.sleep(pauseMillis);
-
-                // --- 2. Take screenshot after each scroll ---
-                System.out.println("Scroll number: " + scrollNumber);
-                StringfileName = String.format("%s_scroll_%02d.png", timestamp, scrollNumber);
-                takeScreenshot(driver, screenshotDirectory, fileName);
-                
-                scrollNumber++;
-
-                // --- Check if we've reached the bottom ---
-                long newScrollPosition = (Long) js.executeScript("return window.pageYOffset;");
-                long windowHeight = (Long) js.executeScript("return window.innerHeight");
-
-                if (newScrollPosition == currentScroll || (newScrollPosition + windowHeight) >= pageHeight) {
-                    System.out.println("Reached the bottom of the page.");
-                    break;
-                }
-                currentScroll = newScrollPosition;
-            }
-
-        } catch (InterruptedException e) {
-            System.err.println("Scroll loop was interrupted.");
-            Thread.currentThread().interrupt();
-        } catch (Exception e) {
-            System.err.println("An error occurred during scrolling: " + e.getMessage());
-            e.printStackTrace();
-        }
-    }
++(₹+₹+₹(
+var el = document.getElementById("yourId");
+el.style.outline = "3px solid red";
+el.style.backgroundColor = "yellow";
