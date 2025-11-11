@@ -1,28 +1,30 @@
-public void unhighlight(By locator) {
-    try {
-        WebElement element = wait.until(
-                ExpectedConditions.presenceOfElementLocated(locator));
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.util.Locale;
 
-        jsExecutor.executeScript(
-            "const el = arguments[0];" +
+public class DateFormatterExample {
+    public static void main(String[] args) {
+        // 1. Your input string
+        String inputDate = "11/14/2025";
 
-            // restore main element
-            "if (el.hasAttribute('data-original-style')) {" +
-            "   el.setAttribute('style', el.getAttribute('data-original-style'));" +
-            "   el.removeAttribute('data-original-style');" +
-            "}" +
+        // 2. Define the formatter for your input ("MM/dd/yyyy")
+        // Note: MM is for month, mm is for minutes. Use MM.
+        DateTimeFormatter inputFormatter = DateTimeFormatter.ofPattern("MM/dd/yyyy");
 
-            // restore children
-            "const children = el.querySelectorAll('*');" +
-            "children.forEach(c => {" +
-            "   if (c.hasAttribute('data-original-style')) {" +
-            "       c.setAttribute('style', c.getAttribute('data-original-style'));" +
-            "       c.removeAttribute('data-original-style');" +
-            "   }" +
-            "});"
-            , element);
+        // 3. Define the formatter for your desired output ("dd MMMM yyyy")
+        // "MMMM" gives the full month name (e.g., "November")
+        // We specify Locale.ENGLISH to ensure it's "November" not "novembre" (French), etc.
+        DateTimeFormatter outputFormatter = DateTimeFormatter.ofPattern("dd MMMM yyyy", Locale.ENGLISH);
 
-    } catch (TimeoutException e) {
-        System.out.println("Element not found for unhighlighting: " + locator);
+        // 4. Parse the input string into a LocalDate object
+        // This object understands the date components (day, month, year)
+        LocalDate date = LocalDate.parse(inputDate, inputFormatter);
+
+        // 5. Format the LocalDate object into your new output string
+        String outputDate = date.format(outputFormatter);
+
+        // 6. Print the results
+        System.out.println("Input: " + inputDate);
+        System.out.println("Output: " + outputDate);
     }
 }
