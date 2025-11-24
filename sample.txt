@@ -1,17 +1,13 @@
-public void scrollToView(Object locatorOrElement) {
-    WebElement element = (locatorOrElement instanceof By)
-            ? driver.findElement((By) locatorOrElement)
-            : (WebElement) locatorOrElement;
-
-    ((JavascriptExecutor) driver).executeScript("arguments[0].scrollIntoView(true);", element);
-}
-
-
-public void highlight(Object locatorOrElement) {
-    WebElement element = (locatorOrElement instanceof By)
-            ? driver.findElement((By) locatorOrElement)
-            : (WebElement) locatorOrElement;
-
-    ((JavascriptExecutor) driver).executeScript(
-        "arguments[0].style.border='2px solid lime'", element);
+public void smoothScrollToCenter(WebElement element) {
+    JavascriptExecutor js = (JavascriptExecutor) driver;
+    js.executeScript(
+        "var element = arguments[0];" +
+        "var viewPortHeight = Math.max(document.documentElement.clientHeight, window.innerHeight || 0);" +
+        "var elementTop = element.getBoundingClientRect().top;" +
+        "var targetY = elementTop - (viewPortHeight / 2);" +
+        "var startY = window.pageYOffset;" +
+        "var targetPosition = startY + targetY;" +
+        "window.scrollTo({ top: targetPosition, behavior: 'smooth' });",
+        element
+    );
 }
