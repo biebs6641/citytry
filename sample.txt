@@ -1,13 +1,4 @@
-public void smoothScrollToCenter(WebElement element) {
+public void unhighlightElement(WebElement element) {
     JavascriptExecutor js = (JavascriptExecutor) driver;
-    js.executeScript(
-        "var element = arguments[0];" +
-        "var viewPortHeight = Math.max(document.documentElement.clientHeight, window.innerHeight || 0);" +
-        "var elementTop = element.getBoundingClientRect().top;" +
-        "var targetY = elementTop - (viewPortHeight / 2);" +
-        "var startY = window.pageYOffset;" +
-        "var targetPosition = startY + targetY;" +
-        "window.scrollTo({ top: targetPosition, behavior: 'smooth' });",
-        element
-    );
+    js.executeScript("arguments[0].style.border=''; arguments[0].style.outline='';", element);
 }
