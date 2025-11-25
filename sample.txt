@@ -1,32 +1,35 @@
-public boolean isInteractable(WebElement element) {
-    try {
-        JavascriptExecutor js = (JavascriptExecutor) driver;
-        return (Boolean) js.executeScript(
-            "try {" +
-            "  let rect = arguments[0].getBoundingClientRect();" +
-            "  let x = rect.left + rect.width/2;" +
-            "  let y = rect.top + rect.height/2;" +
-            "  let ev = new MouseEvent('mousedown', {clientX:x, clientY:y, bubbles:true});" +
-            "  return arguments[0].dispatchEvent(ev);" +
-            "} catch(e) { return false; }",
-            element
-        );
-    } catch (Exception e) {
-        return false;
-    }
-}
+navigateToMenubar();
 
+waits.waitForInVisibility(loadingIcon);
 
-public WebElement findActiveElement(By locator) {
-    List<WebElement> elements = driver.findElements(locator);
-    for (WebElement e : elements) {
-        if (isInteractable(e)) {
-            return e;  // THE REAL ACTIVE ONE
+elickobj.click(addResponsiblePartyButton, "Button to add Members");
+
+List<WebElement> elements = driver.findElements(addResponsibleHtml);
+
+WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(10));
+
+for (WebElement ele : elements) {
+
+    if (isInteractable(ele)) {
+
+        try {
+
+            WebElement firstNameInput = wait.until(
+                    ExpectedConditions.elementToBeClickable(
+                            ele.findElement(By.xpath(".//input[@placeholder='Enter first name']"))
+                    )
+            );
+
+            firstNameInput.click();
+            firstNameInput.sendKeys("hjjhskdajzd");
+
+            ReportLogger.PasslogWithScreenshot("");
+
+        } catch (Exception ex) {
+            ReportLogger.log("Input still not interactable: " + ex.getMessage());
         }
+
+    } else {
+        ReportLogger.log("Not on top");
     }
-    return null;
 }
-
-
-
-
