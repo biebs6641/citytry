@@ -1,4 +1,23 @@
-public void unhighlightElement(WebElement element) {
+public boolean isOnTop(WebElement element) {
     JavascriptExecutor js = (JavascriptExecutor) driver;
-    js.executeScript("arguments[0].style.border=''; arguments[0].style.outline='';", element);
+    return (boolean) js.executeScript(
+        "const elem = arguments[0];" +
+        "const rect = elem.getBoundingClientRect();" +
+        "const x = rect.left + rect.width / 2;" +
+        "const y = rect.top + rect.height / 2;" +
+        "return document.elementFromPoint(x, y) === elem;",
+        element
+    );
 }
+
+
+public WebElement getRealElement(By locator) {
+    List<WebElement> list = driver.findElements(locator);
+    for (WebElement e : list) {
+        if (isOnTop(e)) {
+            return e; // THIS is the real active element
+        }
+    }
+    return null;
+}
+
