@@ -1,7 +1,75 @@
-WebElement scrollable = driver.findElement(By.id("scrollableDiv"));
-WebElement target = driver.findElement(By.xpath("//div[text()='item2']"));
+explain below like in pattern why we didn't used Customer Class array instead of member in Store classpackage temp;
 
-((JavascriptExecutor) driver).executeScript(
-        "arguments[0].scrollIntoView({block: 'center'});",
-        target
-);
+interface member{
+	
+	public void callback();
+	
+}
+
+
+
+class customer implements member{
+	
+	
+	String S;
+	
+	public customer(String name) {
+		// TODO Auto-generated constructor stub
+	this.S = name;
+	}
+	
+	public void callback() {
+		System.out.println("hi I will visit the Store"+this.S);
+	}
+	
+	
+}
+
+
+
+class Store{
+	
+	member m[] = new member[10];
+	int count;
+	
+	public void register(member m) {
+		this.m[count++] = m;
+	}
+	
+	public void InviteForSale() {
+		
+		
+		for(int i =0;i<count;i++) {
+			this.m[i].callback();
+		}
+	}
+	
+	
+	
+	
+	
+}
+
+
+
+public class InterFace {
+
+	public static void main(String[] args) {
+		// TODO Auto-generated method stub
+
+		
+		customer s1 = new customer("John");
+		customer s2 = new customer("Domnik");
+		customer s3 = new customer("Peter");
+		
+		Store store = new Store();
+		store.register(s1);
+		store.register(s2);
+		store.register(s3);
+		
+		
+		store.InviteForSale();
+		
+	}
+
+}
