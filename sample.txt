@@ -70,3 +70,23 @@ public class ExtentManager {
         <documentTitle>Automation Execution</documentTitle>
     </configuration>
 </extent>
+
+
+
+
+
+
+<extent>
+    <configuration>
+        <theme>standard</theme>
+        <reportName>Automation Execution Report</reportName>
+        <documentTitle>Test Report</documentTitle>
+
+        <!-- Enable filters -->
+        <timelineEnabled>true</timelineEnabled>
+        <enableAuthorView>true</enableAuthorView>
+        <enableCategoryView>true</enableCategoryView>
+        <enableDeviceView>true</enableDeviceView>
+        <enableExceptionView>true</enableExceptionView>
+    </configuration>
+</extent>
