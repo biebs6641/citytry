@@ -1,75 +1,72 @@
-explain below like in pattern why we didn't used Customer Class array instead of member in Store classpackage temp;
+public class ExtentManager {
 
-interface member{
-	
-	public void callback();
-	
+    private static ExtentReports extent;
+    private static String reportDir;
+    private static ThreadLocal<ExtentTest> test = new ThreadLocal<>();
+
+    public static ExtentReports getInstance() {
+
+        if (extent == null) {
+            String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
+            reportDir = System.getProperty("user.dir") + "/reports/";
+            new File(reportDir).mkdirs();
+
+            String reportPath = reportDir + "SparkReport_" + timeStamp + ".html";
+
+            ExtentSparkReporter spark = new ExtentSparkReporter(reportPath);
+
+            // 🔥 Enable Pass/Fail filtering UI
+            spark.config().setTimelineEnabled(true);
+            spark.config().setReportName("Automation Report");
+            spark.config().setDocumentTitle("Execution Report");
+
+            // 🔥 Load external config (optional but recommended)
+            spark.loadXMLConfig(System.getProperty("user.dir") + "/extent-config.xml");
+
+            extent = new ExtentReports();
+            extent.attachReporter(spark);
+
+            // System info
+            extent.setSystemInfo("OS", System.getProperty("os.name"));
+            extent.setSystemInfo("Java Version", System.getProperty("java.version"));
+            extent.setSystemInfo("User", System.getProperty("user.name"));
+        }
+
+        return extent;
+    }
+
+    public static ExtentTest getTest() {
+        return test.get();
+    }
+
+    public static void setTest(ExtentTest extentTest) {
+        test.set(extentTest);
+    }
 }
 
 
 
-class customer implements member{
-	
-	
-	String S;
-	
-	public customer(String name) {
-		// TODO Auto-generated constructor stub
-	this.S = name;
-	}
-	
-	public void callback() {
-		System.out.println("hi I will visit the Store"+this.S);
-	}
-	
-	
-}
 
 
+<extent>
+    <configuration>
+        <theme>standard</theme>
+        <encoding>UTF-8</encoding>
 
-class Store{
-	
-	member m[] = new member[10];
-	int count;
-	
-	public void register(member m) {
-		this.m[count++] = m;
-	}
-	
-	public void InviteForSale() {
-		
-		
-		for(int i =0;i<count;i++) {
-			this.m[i].callback();
-		}
-	}
-	
-	
-	
-	
-	
-}
+        <!-- Show Pass/Fail filters -->
+        <protocol>HTTPS</protocol>
 
+        <timelineEnabled>true</timelineEnabled>
 
+        <!-- Enable Dashboard -->
+        <enableDashboard>true</enableDashboard>
 
-public class InterFace {
+        <!-- Show category, device, author -->
+        <enableCategoryView>true</enableCategoryView>
+        <enableAuthorView>true</enableAuthorView>
+        <enableDeviceView>true</enableDeviceView>
 
-	public static void main(String[] args) {
-		// TODO Auto-generated method stub
-
-		
-		customer s1 = new customer("John");
-		customer s2 = new customer("Domnik");
-		customer s3 = new customer("Peter");
-		
-		Store store = new Store();
-		store.register(s1);
-		store.register(s2);
-		store.register(s3);
-		
-		
-		store.InviteForSale();
-		
-	}
-
-}
+        <reportName>Cucumber Test Execution Report</reportName>
+        <documentTitle>Automation Execution</documentTitle>
+    </configuration>
+</extent>
