@@ -1,59 +1,10 @@
-public class ReportLogger {
-
-    private static ThreadLocal<ExtentTest> test = new ThreadLocal<>();
-
-    public static void setTest(ExtentTest extentTest) {
-        test.set(extentTest);
-    }
-
-    public static void log(String message) {
-        if (test.get() != null) {
-            test.get().info(message);
-        }
-    }
-
-    public static void pass(String message) {
-        test.get().pass(message);
-    }
-
-    public static void fail(String message) {
-        test.get().fail(message);
-    }
-}
-
-
-public class Hooks {
-
-    WebDriver driver;
-    private static ExtentReports extent = ExtentManager.getInstance();
-    public static Scenario currentScenario;
-
-    @Before
-    public void setup(Scenario scenario) {
-
-        currentScenario = scenario;
-
-        ExtentTest test = extent.createTest(scenario.getName());
-        ExtentManager.setTest(test);
-
-        ExtentManager.getTest().info("Starting scenario: " + scenario.getName());
-        ReportLogger.setTest(test);
-        ReportLogger.log("Application launched");
-    }
-
-    @After
-    public void tearDown(Scenario scenario) {
-
-        if (scenario.isFailed()) {
-            ExtentManager.getTest().fail("Scenario Failed: " + scenario.getName());
-        } else {
-            ExtentManager.getTest().pass("Scenario Passed: " + scenario.getName());
-        }
-
-        extent.flush();
-    }
-}
-
+import com.aventstack.extentreports.ExtentReports;
+import com.aventstack.extentreports.ExtentTest;
+import com.aventstack.extentreports.reporter.ExtentSparkReporter;
+import com.aventstack.extentreports.reporter.configuration.Theme;
+import java.io.File;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 
 public class ExtentManager {
 
@@ -70,8 +21,8 @@ public class ExtentManager {
             new File(reportDir).mkdirs();
 
             ExtentSparkReporter spark = new ExtentSparkReporter(reportDir + "SparkReport_" + timestamp + ".html");
-            spark.config().setDocumentTitle("Automation Report");
-            spark.config().setReportName("Execution Summary");
+            spark.config().setDocumentTitle("Automation Execution Report");
+            spark.config().setReportName("Automation Test Report");
             spark.config().setTheme(Theme.DARK);
 
             extent = new ExtentReports();
@@ -99,3 +50,112 @@ public class ExtentManager {
     }
 }
 
+
+
+
+
+
+
+
+
+import com.aventstack.extentreports.ExtentTest;
+import com.aventstack.extentreports.Status;
+import com.aventstack.extentreports.MediaEntityBuilder;
+import com.aventstack.extentreports.markuputils.ExtentColor;
+import com.aventstack.extentreports.markuputils.MarkupHelper;
+import org.openqa.selenium.OutputType;
+import org.openqa.selenium.TakesScreenshot;
+import org.openqa.selenium.WebDriver;
+
+public class ReportLogger {
+
+    // No ThreadLocal here — using ExtentManager's ThreadLocal
+    public static void setTest(ExtentTest extentTest) {
+        ExtentManager.setTest(extentTest);
+    }
+
+    // Capture screenshot
+    private static String captureScreenshotBase64(WebDriver driver) {
+        return ((TakesScreenshot) driver).getScreenshotAs(OutputType.BASE64);
+    }
+
+    // Log with screenshot
+    public static void logWithScreenshot(String message) {
+        WebDriver driver = WebDriverFactory.getDriver();
+        ExtentTest test = ExtentManager.getTest();
+
+        if (test != null && driver != null) {
+            String base64 = captureScreenshotBase64(driver);
+            test.info(message, MediaEntityBuilder.createScreenCaptureFromBase64String(base64).build());
+        } else if (test != null) {
+            test.info(message + " (Screenshot skipped: driver/test null)");
+        }
+    }
+
+    // PASS log with screenshot
+    public static void passLogWithScreenshot(String message) {
+        WebDriver driver = WebDriverFactory.getDriver();
+        ExtentTest test = ExtentManager.getTest();
+
+        if (test != null && driver != null) {
+            String base64 = captureScreenshotBase64(driver);
+            test.pass(message, MediaEntityBuilder.createScreenCaptureFromBase64String(base64).build());
+        } else if (test != null) {
+            test.pass(message + " (Screenshot skipped: driver/test null)");
+        }
+    }
+
+    // Simple text log
+    public static void log(String message) {
+        ExtentTest test = ExtentManager.getTest();
+        if (test != null) {
+            test.info(message);
+        }
+    }
+
+    // Colored text log
+    public static void log(Status status, String message, ExtentColor color) {
+        ExtentTest test = ExtentManager.getTest();
+        if (test != null) {
+            test.log(status, MarkupHelper.createLabel(message, color));
+        }
+    }
+}
+
+
+
+
+
+import io.cucumber.java.After;
+import io.cucumber.java.Before;
+import io.cucumber.java.Scenario;
+import com.aventstack.extentreports.ExtentReports;
+import com.aventstack.extentreports.ExtentTest;
+
+public class Hooks {
+
+    private static ExtentReports extent = ExtentManager.getInstance();
+
+    @Before
+    public void setup(Scenario scenario) {
+
+        ExtentTest test = extent.createTest(scenario.getName());
+        ExtentManager.setTest(test);
+
+        ReportLogger.setTest(test);
+        ReportLogger.log("Starting Scenario: " + scenario.getName());
+        ReportLogger.log("Application launched");
+    }
+
+    @After
+    public void tearDown(Scenario scenario) {
+
+        if (scenario.isFailed()) {
+            ReportLogger.log(Status.FAIL, "Scenario Failed", ExtentColor.RED);
+        } else {
+            ReportLogger.log(Status.PASS, "Scenario Passed", ExtentColor.GREEN);
+        }
+
+        extent.flush();
+    }
+}
