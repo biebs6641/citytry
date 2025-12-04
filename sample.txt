@@ -1,3 +1,60 @@
+public class ReportLogger {
+
+    private static ThreadLocal<ExtentTest> test = new ThreadLocal<>();
+
+    public static void setTest(ExtentTest extentTest) {
+        test.set(extentTest);
+    }
+
+    public static void log(String message) {
+        if (test.get() != null) {
+            test.get().info(message);
+        }
+    }
+
+    public static void pass(String message) {
+        test.get().pass(message);
+    }
+
+    public static void fail(String message) {
+        test.get().fail(message);
+    }
+}
+
+
+public class Hooks {
+
+    WebDriver driver;
+    private static ExtentReports extent = ExtentManager.getInstance();
+    public static Scenario currentScenario;
+
+    @Before
+    public void setup(Scenario scenario) {
+
+        currentScenario = scenario;
+
+        ExtentTest test = extent.createTest(scenario.getName());
+        ExtentManager.setTest(test);
+
+        ExtentManager.getTest().info("Starting scenario: " + scenario.getName());
+        ReportLogger.setTest(test);
+        ReportLogger.log("Application launched");
+    }
+
+    @After
+    public void tearDown(Scenario scenario) {
+
+        if (scenario.isFailed()) {
+            ExtentManager.getTest().fail("Scenario Failed: " + scenario.getName());
+        } else {
+            ExtentManager.getTest().pass("Scenario Passed: " + scenario.getName());
+        }
+
+        extent.flush();
+    }
+}
+
+
 public class ExtentManager {
 
     private static ExtentReports extent;
@@ -7,26 +64,20 @@ public class ExtentManager {
     public static ExtentReports getInstance() {
 
         if (extent == null) {
-            String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
+
+            String timestamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
             reportDir = System.getProperty("user.dir") + "/reports/";
             new File(reportDir).mkdirs();
 
-            String reportPath = reportDir + "SparkReport_" + timeStamp + ".html";
-
-            ExtentSparkReporter spark = new ExtentSparkReporter(reportPath);
-
-            // 🔥 Enable Pass/Fail filtering UI
-            spark.config().setTimelineEnabled(true);
-            spark.config().setReportName("Automation Report");
-            spark.config().setDocumentTitle("Execution Report");
-
-            // 🔥 Load external config (optional but recommended)
-            spark.loadXMLConfig(System.getProperty("user.dir") + "/extent-config.xml");
+            ExtentSparkReporter spark = new ExtentSparkReporter(reportDir + "SparkReport_" + timestamp + ".html");
+            spark.config().setDocumentTitle("Automation Report");
+            spark.config().setReportName("Execution Summary");
+            spark.config().setTheme(Theme.DARK);
 
             extent = new ExtentReports();
             extent.attachReporter(spark);
 
-            // System info
+            // System Info
             extent.setSystemInfo("OS", System.getProperty("os.name"));
             extent.setSystemInfo("Java Version", System.getProperty("java.version"));
             extent.setSystemInfo("User", System.getProperty("user.name"));
@@ -42,51 +93,9 @@ public class ExtentManager {
     public static void setTest(ExtentTest extentTest) {
         test.set(extentTest);
     }
+
+    public static String getReportPath() {
+        return reportDir;
+    }
 }
 
-
-
-
-
-<extent>
-    <configuration>
-        <theme>standard</theme>
-        <encoding>UTF-8</encoding>
-
-        <!-- Show Pass/Fail filters -->
-        <protocol>HTTPS</protocol>
-
-        <timelineEnabled>true</timelineEnabled>
-
-        <!-- Enable Dashboard -->
-        <enableDashboard>true</enableDashboard>
-
-        <!-- Show category, device, author -->
-        <enableCategoryView>true</enableCategoryView>
-        <enableAuthorView>true</enableAuthorView>
-        <enableDeviceView>true</enableDeviceView>
-
-        <reportName>Cucumber Test Execution Report</reportName>
-        <documentTitle>Automation Execution</documentTitle>
-    </configuration>
-</extent>
-
-
-
-
-
-
-<extent>
-    <configuration>
-        <theme>standard</theme>
-        <reportName>Automation Execution Report</reportName>
-        <documentTitle>Test Report</documentTitle>
-
-        <!-- Enable filters -->
-        <timelineEnabled>true</timelineEnabled>
-        <enableAuthorView>true</enableAuthorView>
-        <enableCategoryView>true</enableCategoryView>
-        <enableDeviceView>true</enableDeviceView>
-        <enableExceptionView>true</enableExceptionView>
-    </configuration>
-</extent>
