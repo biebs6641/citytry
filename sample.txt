@@ -1,17 +1,2 @@
-Hi Martin,
-
-I have completed the QA effort estimation for the below stories:
-
-- H51771
-- X51772
-
-I would also like to inform you that I will be on PTO starting tomorrow and will resume work on 2nd January 2026.
-
-Additionally, RT is scheduled to begin on 7th January. At that time, I will already have current sprint stories assigned to my board, along with stories from the Twilio board. Due to this workload, I will not be able to work on ST and RT in parallel.
-
-If we receive the POC or detailed story information in advance, I can utilize some time during my PTO to validate them. Otherwise, we may need to consider removing these items from the January release.
-
-Please let me know your thoughts or suggestions on how you would like to proceed.
-
-Thanks and regards,
-Pardeep Kumar
+Please find the updated testing documents attached. I noticed that one of the test cases retained its old name in the previous version by mistake. This has now been corrected in the updated documents.
+Apologies for the oversight, and thank you for your understanding.
