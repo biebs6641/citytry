@@ -1,2 +1,11 @@
-I just saw the group conversation regarding the automation demo planned for next week. I’m concerned that it may not be feasible at this time, as I have deliverables from the API team due by 13th Feb, and the requested API access is still pending.
-Could you please advise how you would like us to proceed?
+public WebElement waitForFirstVisibleElement(By locator) {
+    return wait.until(driver -> {
+        List<WebElement> elements = driver.findElements(locator);
+        for (WebElement element : elements) {
+            if (element.isDisplayed()) {
+                return element;
+            }
+        }
+        return null; // keep waiting
+    });
+}
