@@ -1,2 +1,2 @@
-Please find the updated testing documents attached. I noticed that one of the test cases retained its old name in the previous version by mistake. This has now been corrected in the updated documents.
-Apologies for the oversight, and thank you for your understanding.
+I just saw the group conversation regarding the automation demo planned for next week. I’m concerned that it may not be feasible at this time, as I have deliverables from the API team due by 13th Feb, and the requested API access is still pending.
+Could you please advise how you would like us to proceed?
