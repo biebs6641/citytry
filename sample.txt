@@ -1,11 +1,52 @@
-public WebElement waitForFirstVisibleElement(By locator) {
-    return wait.until(driver -> {
-        List<WebElement> elements = driver.findElements(locator);
-        for (WebElement element : elements) {
-            if (element.isDisplayed()) {
-                return element;
-            }
-        }
-        return null; // keep waiting
-    });
+package com.selenium.WebDriverManager;
+
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.function.Supplier;
+
+import org.openqa.selenium.WebDriver;
+import org.openqa.selenium.chrome.ChromeDriver;
+import org.openqa.selenium.chrome.ChromeOptions;
+import org.openqa.selenium.edge.EdgeDriver;
+import org.openqa.selenium.edge.EdgeOptions;
+
+import io.github.bonigarcia.wdm.WebDriverManager;
+
+public class BrowserManager {
+
+	private static final Map<String, Supplier<WebDriver>> getBrowser = new LinkedHashMap<>();
+	private static final ThreadLocal<WebDriver> driverStore = new ThreadLocal<WebDriver>();
+
+	private static final Supplier<WebDriver> chromBrowser = () -> {
+
+		ChromeOptions op = new ChromeOptions();
+		op.addArguments("--start-maximized");
+		WebDriverManager.chromedriver().setup();
+
+		return new ChromeDriver(op);
+
+	};
+
+	private static final Supplier<WebDriver> edgeBrowser = () -> {
+
+		WebDriverManager.edgedriver().setup();
+		EdgeOptions options = new EdgeOptions();
+		options.addArguments("--start-maximized"); // Maximize browser
+		options.addArguments("--disable-popup-blocking");
+
+		return new EdgeDriver(options);
+
+	};
+
+	static {
+
+		getBrowser.put("chrome", chromBrowser);
+		getBrowser.put("edge", edgeBrowser);
+	}
+
+	public WebDriver getDriver(String browser) {
+		return getBrowser.get(browser).get();
+
+	}
+
 }
