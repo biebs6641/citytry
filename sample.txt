@@ -1,1 +1,16 @@
-
+Map<String, AuthData> map= new HashMap<>(); 
+		
+		for(JsonNode node:jsonarray){ 
+		   AuthData authdata=new AuthData(); 			authdata.set(node.path("n1")); 
+		   ...
+		   JsonArray items= node.path("listitemdetails"); 
+		   List<ListItemDetail> details=new ArrayList<>(); 
+		   for(JsonNode item:items){ 
+		      ListItemDetail detail=new ListItemDetail(); 
+		      detail.set(); 
+		      ...
+		      details.add(detail);
+		   }
+		   authdata.set(details);
+		   map.put(node.get("authid"),authdata);
+		}
