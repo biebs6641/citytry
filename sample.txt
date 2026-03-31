@@ -1,16 +1,16 @@
-Map<String, AuthData> map= new HashMap<>(); 
-		
-		for(JsonNode node:jsonarray){ 
-		   AuthData authdata=new AuthData(); 			authdata.set(node.path("n1")); 
-		   ...
-		   JsonArray items= node.path("listitemdetails"); 
-		   List<ListItemDetail> details=new ArrayList<>(); 
-		   for(JsonNode item:items){ 
-		      ListItemDetail detail=new ListItemDetail(); 
-		      detail.set(); 
-		      ...
-		      details.add(detail);
-		   }
-		   authdata.set(details);
-		   map.put(node.get("authid"),authdata);
-		}
+public void waitForFullPageLoad(WebDriver driver) {
+    WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(40));
+
+    // Step 1: Wait for document ready state
+    wait.until(driver1 -> ((JavascriptExecutor) driver1)
+        .executeScript("return document.readyState").equals("complete"));
+
+    // Step 2: Wait for no active XHR/Fetch requests
+    wait.until(driver1 -> {
+        JavascriptExecutor js = (JavascriptExecutor) driver1;
+        Long pendingRequests = (Long) js.executeScript(
+            "return window.__pendingRequests || 0"
+        );
+        return pendingRequests == 0;
+    });
+}
