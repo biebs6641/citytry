@@ -1,16 +1,7 @@
-public void waitForFullPageLoad(WebDriver driver) {
-    WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(40));
+Hey, quick question on the API automation framework we discussed during the demo — I want to make sure I build it right before I start.
 
-    // Step 1: Wait for document ready state
-    wait.until(driver1 -> ((JavascriptExecutor) driver1)
-        .executeScript("return document.readyState").equals("complete"));
+Were you looking for:
+1. JSON schema validation at the API response level, or
+2. Comparing the API response data against the DB layer to verify data integrity?
 
-    // Step 2: Wait for no active XHR/Fetch requests
-    wait.until(driver1 -> {
-        JavascriptExecutor js = (JavascriptExecutor) driver1;
-        Long pendingRequests = (Long) js.executeScript(
-            "return window.__pendingRequests || 0"
-        );
-        return pendingRequests == 0;
-    });
-}
+Just want to align before I get started. Thanks!
