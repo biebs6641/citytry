@@ -1,3 +1,201 @@
-Thank you for sharing the plan. It's quite detailed and I want to go through it carefully to fully understand the scope.
+# API Automation Framework — Plan & Roadmap
 
-Once I've reviewed it thoroughly, I'll get back to you with my thoughts and a proposed roadmap.
+**Prepared by:** [Your Name]  
+**Date:** April 2026  
+**Status:** In Planning  
+
+---
+
+## 1. Overview
+
+This document outlines the plan to design and deliver a structured API automation framework for our services. The framework will cover four layers of test coverage — Smoke, Contract, CRUD Lifecycle, and Security/Negative tests — integrated into the CI/CD pipeline with reporting and alerting.
+
+Given that I am contributing to this initiative while actively supporting two teams (2–3 days available per week), this roadmap is structured to deliver value incrementally, starting with a working foundation and expanding progressively.
+
+---
+
+## 2. Goals
+
+- Catch regressions and deployment failures early through automated API tests
+- Validate API responses against the OpenAPI 3.0 spec (openapi-dev.yaml) to prevent schema drift
+- Ensure full CRUD data lifecycle correctness for stateful resources
+- Reject invalid and unauthorized requests with correct status codes and safe error messages
+- Provide self-contained HTML reports as GitHub Actions artifacts per run
+- Gate the CD pipeline from promoting broken builds to the next environment
+
+---
+
+## 3. Technology Stack
+
+| Component | Tool / Library |
+|---|---|
+| Language | Java |
+| API Testing | RestAssured |
+| Test Runner | TestNG |
+| Contract Validation | Atlassian swagger-request-validator |
+| Assertions | AssertJ |
+| Reporting | Allure + allure-testng |
+| Build Tool | Maven (existing stack) |
+| Slack Alerts | Custom TestNG Listener via HTTP POST |
+| CI/CD | GitHub Actions |
+
+**Rationale:** Java was chosen to align with the team's existing skills and Spring/Maven stack, minimizing onboarding effort and enabling shared code review standards.
+
+---
+
+## 4. Framework Architecture (High-Level)
+
+```
+api-automation/
+├── pom.xml
+├── src/test/java/
+│   ├── base/          → BaseTest.java (auth, RestAssured config)
+│   ├── smoke/         → SmokeTests.java
+│   ├── contract/      → ContractTests.java
+│   ├── crud/          → Per-resource lifecycle tests
+│   ├── security/      → Negative & auth tests
+│   └── listeners/     → SlackNotifier.java (TestNG listener)
+└── src/test/resources/
+    ├── openapi-dev.yaml
+    └── testng.xml
+```
+
+The framework is layered so each suite can be run independently or as a full suite. Tests are fully isolated — each test creates and cleans up its own data.
+
+---
+
+## 5. Phased Delivery Roadmap
+
+> Working days available: **2–3 days per week**
+
+---
+
+### Phase 1 — Foundation & Smoke Tests
+**Duration:** 2 weeks (4–6 working days)  
+**Deliverable:** A working Maven project with smoke tests running in GitHub Actions
+
+**What will be done:**
+- Set up Maven project structure with RestAssured, TestNG, and AssertJ dependencies
+- Create `BaseTest.java` — shared auth token setup, base URL config, environment switching
+- Write smoke tests for all major endpoints (GET requests, status code + top-level shape assertions)
+- Wire up GitHub Actions workflow (`.github/workflows/api-tests.yml`)
+- Upload basic Surefire/Allure report as GitHub Actions artifact
+
+**What leadership can expect to see:**
+- A runnable test project in the repository
+- Green/red test results visible in GitHub Actions on every run
+- A downloadable HTML report per run
+
+---
+
+### Phase 2 — Contract Tests
+**Duration:** 2 weeks (4–6 working days)  
+**Deliverable:** Schema validation running against all endpoints using openapi-dev.yaml
+
+**What will be done:**
+- Integrate `swagger-request-validator` library
+- Load `openapi-dev.yaml` once per test session
+- Write contract tests for each endpoint — validate real responses field-by-field against the spec
+- Capture and report schema violations (missing fields, type mismatches, undeclared fields, enum violations)
+
+**What leadership can expect to see:**
+- Any schema drift between the API and the spec is automatically caught on every run
+- Contract violations shown clearly in the Allure report
+
+---
+
+### Phase 3 — CRUD Lifecycle Tests
+**Duration:** 3 weeks (6–9 working days)  
+**Deliverable:** End-to-end data lifecycle tests for all stateful resources (DynamoDB)
+
+**What will be done:**
+- Identify all stateful resources (e.g. Orders, Users, etc.)
+- Write full Create → Read → Update → Delete → Verify lifecycle tests per resource
+- Implement `@AfterMethod(alwaysRun = true)` cleanup to guarantee data is removed even on test failure
+- Validate data persistence, correct status codes, and response correctness at each step
+
+**What leadership can expect to see:**
+- Confidence that real data flows correctly through all API operations end-to-end
+- No orphaned test data left in DynamoDB after runs
+
+---
+
+### Phase 4 — Security & Negative Tests
+**Duration:** 2 weeks (4–6 working days)  
+**Deliverable:** Negative test coverage for auth, permissions, invalid inputs, and safe error messages
+
+**What will be done:**
+- Write parameterized tests covering: missing/expired tokens (401), wrong role (403), invalid inputs (400), non-existent resources (404), oversized payloads (413)
+- Assert that error responses never contain internal details (stack traces, DB names, table names)
+- Cover injection-style inputs in query params and request bodies
+
+**What leadership can expect to see:**
+- Verified proof that the API rejects bad actors correctly
+- Safe error message compliance confirmed on every run
+
+---
+
+### Phase 5 — Reporting, Alerting & Pipeline Gating
+**Duration:** 1 week (2–3 working days)  
+**Deliverable:** Full Allure HTML reports, Slack failure alerts, and CD pipeline exit code gating
+
+**What will be done:**
+- Finalize Allure report configuration — self-contained HTML uploaded as GitHub Actions artifact per run
+- Implement `SlackNotifier` TestNG listener — posts to Slack channel on failure with environment, failed count, and artifact link
+- Confirm Maven Surefire exit code gating blocks CD pipeline promotion on test failure
+
+**What leadership can expect to see:**
+- Instant Slack alerts when tests fail in any environment
+- CD pipeline automatically blocked from promoting broken builds
+- Full downloadable HTML report for every run
+
+---
+
+## 6. Summary Timeline
+
+| Phase | Focus | Effort | Cumulative |
+|---|---|---|---|
+| Phase 1 | Foundation + Smoke Tests | 2 weeks | Week 2 |
+| Phase 2 | Contract Tests | 2 weeks | Week 4 |
+| Phase 3 | CRUD Lifecycle Tests | 3 weeks | Week 7 |
+| Phase 4 | Security / Negative Tests | 2 weeks | Week 9 |
+| Phase 5 | Reporting, Alerts, Gating | 1 week | Week 10 |
+
+> **Note:** Timelines are estimates based on 2–3 available working days per week. Phases may be adjusted based on API complexity, environment access, and feedback received during delivery.
+
+---
+
+## 7. Dependencies & Risks
+
+| Item | Detail |
+|---|---|
+| API access | Need stable dev/staging environment access with valid test credentials |
+| openapi-dev.yaml | Needs to be available and reasonably up to date before Phase 2 |
+| DynamoDB access | Test user/role needs read-write permissions for CRUD tests in Phase 3 |
+| GitHub Actions | Workflow permissions needed to upload artifacts and trigger on PR/push |
+| Slack webhook | Need an incoming webhook URL for the target channel |
+| Parallel team commitments | Delivery pace is limited to 2–3 days/week — scope creep should be flagged early |
+
+---
+
+## 8. What Is Not in Scope (for now)
+
+- Performance / load testing
+- UI or end-to-end browser testing
+- Test data management tooling (beyond per-test cleanup)
+- Mocking or stubbing of third-party dependencies
+
+These can be considered in a future phase once the core automation suite is stable.
+
+---
+
+## 9. Next Steps
+
+1. Get leadership sign-off on this plan and phased approach
+2. Confirm environment access, test credentials, and GitHub Actions permissions
+3. Begin Phase 1 — project setup and smoke tests
+4. Share a progress update at the end of each phase
+
+---
+
+*This is a living document and will be updated as the framework evolves.*
