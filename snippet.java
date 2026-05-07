@@ -1,1 +1,197 @@
 
+package framework.listeners;
+
+import com.aventstack.extentreports.ExtentReports;
+import com.aventstack.extentreports.ExtentTest;
+import com.aventstack.extentreports.MediaEntityBuilder;
+import com.aventstack.extentreports.Status;
+import framework.base.BaseClass;
+import framework.utils.ExtentReportManager;
+import framework.utils.ScreenshotUtils;
+import org.openqa.selenium.WebDriver;
+import org.testng.ITestContext;
+import org.testng.ITestListener;
+import org.testng.ITestResult;
+import java.util.HashMap;
+import java.util.Map;
+
+public class TestNGListeners implements ITestListener {
+
+    // ExtentReports instance → single report for whole suite
+    private static ExtentReports extent = ExtentReportManager.getInstance();
+
+    // ThreadLocal → each thread gets its own ExtentTest node
+    // important for parallel execution
+    private static ThreadLocal<ExtentTest> extentTest = new ThreadLocal<>();
+
+    // Map → stores test block nodes (xml <test> blocks)
+    private static Map<String, ExtentTest> testBlockMap = new HashMap<>();
+
+    // =========================================================
+    // SUITE / TEST BLOCK LEVEL
+    // =========================================================
+
+    @Override
+    public void onStart(ITestContext context) {
+        System.out.println("\n============================");
+        System.out.println("Test Block Started → " + context.getName());
+        System.out.println("============================");
+
+        // create a parent node in report for this xml test block
+        ExtentTest testBlockNode = extent.createTest(context.getName());
+        testBlockMap.put(context.getName(), testBlockNode);
+    }
+
+    @Override
+    public void onFinish(ITestContext context) {
+        System.out.println("\n============================");
+        System.out.println("Test Block Finished → " + context.getName());
+        System.out.println("Passed  → " + context.getPassedTests().size());
+        System.out.println("Failed  → " + context.getFailedTests().size());
+        System.out.println("Skipped → " + context.getSkippedTests().size());
+        System.out.println("============================\n");
+
+        // flush report → writes everything to html file
+        extent.flush();
+    }
+
+    // =========================================================
+    // TEST METHOD LEVEL
+    // =========================================================
+
+    @Override
+    public void onTestStart(ITestResult result) {
+        System.out.println("Test Started → " + result.getName());
+
+        // get parent test block node from map
+        ExtentTest testBlockNode = testBlockMap
+                                       .get(result.getTestContext().getName());
+
+        // create child node under test block for this method
+        ExtentTest methodNode = testBlockNode
+                                    .createNode(result.getName());
+
+        // assign category → group name if exists, else class name
+        String[] groups = result.getMethod().getGroups();
+        if (groups.length > 0) {
+            for (String group : groups) {
+                methodNode.assignCategory(group);  // smoke, regression etc
+            }
+        } else {
+            methodNode.assignCategory(
+                result.getTestClass().getName()    // class name as category
+            );
+        }
+
+        // assign author if annotation present
+        methodNode.assignAuthor(System.getProperty("user.name"));
+
+        // store in ThreadLocal for this thread
+        extentTest.set(methodNode);
+    }
+
+    @Override
+    public void onTestSuccess(ITestResult result) {
+        System.out.println("Test PASSED → " + result.getName());
+
+        // log pass in report
+        extentTest.get().log(
+            Status.PASS,
+            "Test Passed: " + result.getName()
+        );
+
+        // log execution time
+        long timeTaken = result.getEndMillis() - result.getStartMillis();
+        extentTest.get().info("Execution Time → " + timeTaken + " ms");
+    }
+
+    @Override
+    public void onTestFailure(ITestResult result) {
+        System.out.println("Test FAILED → " + result.getName());
+
+        WebDriver driver = BaseClass.getDriver();
+
+        // take screenshot and embed in report
+        if (driver != null) {
+            try {
+                // embed screenshot directly in report as base64
+                String base64 = ScreenshotUtils.takeScreenshotAsBase64(driver);
+                extentTest.get().fail(
+                    "Test Failed: " + result.getName(),
+                    MediaEntityBuilder.createScreenCaptureFromBase64String(base64)
+                                      .build()
+                );
+            } catch (Exception e) {
+                extentTest.get().fail("Screenshot failed: " + e.getMessage());
+            }
+        }
+
+        // log the exception message
+        extentTest.get().log(
+            Status.FAIL,
+            "Failure Reason → " + result.getThrowable().getMessage()
+        );
+
+        // log full stack trace
+        extentTest.get().log(
+            Status.FAIL,
+            result.getThrowable()
+        );
+
+        // log execution time
+        long timeTaken = result.getEndMillis() - result.getStartMillis();
+        extentTest.get().info("Execution Time → " + timeTaken + " ms");
+    }
+
+    @Override
+    public void onTestSkipped(ITestResult result) {
+        System.out.println("Test SKIPPED → " + result.getName());
+
+        // log skip reason in report
+        extentTest.get().log(
+            Status.SKIP,
+            "Test Skipped: " + result.getName()
+        );
+
+        // log why it was skipped if reason available
+        if (result.getThrowable() != null) {
+            extentTest.get().log(
+                Status.SKIP,
+                "Skip Reason → " + result.getThrowable().getMessage()
+            );
+        }
+    }
+
+    @Override
+    public void onTestFailedButWithinSuccessPercentage(ITestResult result) {
+        System.out.println("Test FAILED within success% → " + result.getName());
+        extentTest.get().log(
+            Status.WARNING,
+            "Failed within success percentage: " + result.getName()
+        );
+    }
+
+    // =========================================================
+    // UTILITY METHODS
+    // =========================================================
+
+    // call this from test methods to log custom info in report
+    public static void logInfo(String message) {
+        extentTest.get().log(Status.INFO, message);
+    }
+
+    // call this from test methods to log pass step
+    public static void logPass(String message) {
+        extentTest.get().log(Status.PASS, message);
+    }
+
+    // call this from test methods to log fail step
+    public static void logFail(String message) {
+        extentTest.get().log(Status.FAIL, message);
+    }
+
+    // call this from test methods to log warning
+    public static void logWarning(String message) {
+        extentTest.get().log(Status.WARNING, message);
+    }
+}
