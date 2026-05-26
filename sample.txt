@@ -1,35 +1,82 @@
-package listeners;
+package utils;
 
+import com.aventstack.extentreports.ExtentReports;
 import com.aventstack.extentreports.ExtentTest;
-import com.aventstack.extentreports.Status;
-import org.testng.ITestContext;
-import org.testng.ITestListener;
-import org.testng.ITestResult;
-import utils.ExtentManager;
+import com.aventstack.extentreports.reporter.ExtentSparkReporter;
 
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.Map;
+import java.io.File;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 
-public class TestListener implements ITestListener {
+public class ExtentManager {
 
-    // One parent ExtentTest per test class, thread-safe
-    private static final Map<String, ExtentTest> classTests = new ConcurrentHashMap<>();
+    private static ExtentReports extent;
+    private static String reportPath;
+    private static final ThreadLocal<ExtentTest> test = new ThreadLocal<>();
 
-    @Override
-    public void onStart(ITestContext context) {
-        ExtentManager.getInstance();
+    public static synchronized ExtentReports getInstance() {
+        if (extent == null) {                           // == not =
+            try {
+                String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
+                String reportDir = System.getProperty("user.dir") + "/reports/";
+
+                File dir = new File(reportDir);
+                if (!dir.exists()) {
+                    dir.mkdirs();                       // MUST be uncommented
+                }
+
+                reportPath = reportDir + "SparkReport_" + timeStamp + ".html";
+                ExtentSparkReporter spark = new ExtentSparkReporter(reportPath);
+
+                extent = new ExtentReports();
+                extent.attachReporter(spark);
+
+                extent.setSystemInfo("OS", System.getProperty("os.name"));
+                extent.setSystemInfo("Java Version", System.getProperty("java.version"));
+                extent.setSystemInfo("User", System.getProperty("user.name"));
+
+                System.out.println(">>> ExtentReports initialized at: " + reportPath);
+            } catch (Exception e) {
+                System.err.println(">>> FAILED to initialize ExtentReports:");
+                e.printStackTrace();
+                throw new RuntimeException("ExtentReports init failed", e);
+            }
+        }
+        return extent;
     }
 
-    @Override
-    public void onTestStart(ITestResult result) {
+    public static ExtentTest getTest() {
+        return test.get();
+    }
+
+    public static void setTest(ExtentTest extentTest) {
+        test.set(extentTest);
+    }
+
+    public static String getReportPath() {
+        return reportPath;
+    }
+
+    public static void unload() {
+        test.remove();
+    }
+}
+
+
+
+
+@Override
+public void onTestStart(ITestResult result) {
+    try {
+        System.out.println(">>> onTestStart thread=" + Thread.currentThread().getId()
+            + " test=" + result.getMethod().getMethodName());
+
         String className = result.getTestClass().getName();
         String simpleClassName = className.substring(className.lastIndexOf('.') + 1);
 
-        // Create or reuse the parent node for this class
         ExtentTest parent = classTests.computeIfAbsent(simpleClassName,
-                name -> ExtentManager.getInstance().createTest(name));
+            name -> ExtentManager.getInstance().createTest(name));
 
-        // Create the test method as a CHILD node under the class
         String methodName = result.getMethod().getMethodName();
         ExtentTest child = parent.createNode(methodName,
                 result.getMethod().getDescription());
@@ -40,60 +87,11 @@ public class TestListener implements ITestListener {
         }
 
         ExtentManager.setTest(child);
+
+        System.out.println(">>> setTest done, getTest()=" + ExtentManager.getTest());
+    } catch (Exception e) {
+        System.err.println(">>> EXCEPTION in onTestStart:");
+        e.printStackTrace();
+        throw e;  // re-throw so TestNG at least logs it
     }
-
-    @Override
-    public void onTestSuccess(ITestResult result) {
-        ExtentManager.getTest().log(Status.PASS, "Test Passed");
-    }
-
-    @Override
-    public void onTestFailure(ITestResult result) {
-        ExtentManager.getTest().log(Status.FAIL, result.getThrowable());
-    }
-
-    @Override
-    public void onTestSkipped(ITestResult result) {
-        ExtentManager.getTest().log(Status.SKIP, "Test Skipped");
-    }
-
-    @Override
-    public void onFinish(ITestContext context) {
-        ExtentManager.getInstance().flush();
-    }
-}
-
-
-@BeforeMethod(alwaysRun = true)
-@Parameters({"environment", "teamName"})
-public void setUp(String environment, String teamName, ITestResult result) {
-    String testCaseName = result.getMethod().getMethodName();
-    setExecutionMode(testCaseName);
-    configureCaseInsensitiveDeserialization();
-
-    // Listener already created the ExtentTest before @BeforeMethod runs
-    ExtentManager.getTest().info("Test Started for: " + testCaseName);
-}
-
-
-@Override
-public void onTestSuccess(ITestResult result) {
-    ExtentManager.getTest().log(Status.PASS, "Test Passed");
-    ExtentManager.unload();
-}
-
-@Override
-public void onTestFailure(ITestResult result) {
-    ExtentManager.getTest().log(Status.FAIL, result.getThrowable());
-    ExtentManager.unload();
-}
-
-@Override
-public void onTestSkipped(ITestResult result) {
-    ExtentManager.getTest().log(Status.SKIP, "Test Skipped");
-    ExtentManager.unload();
-}
-
-public static void unload() {
-    test.remove();
 }
