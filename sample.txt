@@ -1,9 +1,19 @@
+package listeners;
+
+import com.aventstack.extentreports.ExtentTest;
+import com.aventstack.extentreports.Status;
+import org.testng.ITestContext;
+import org.testng.ITestListener;
+import org.testng.ITestResult;
+import utils.ExtentManager;
+
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.Map;
 
 public class TestListener implements ITestListener {
 
-    private static final Map<String, ExtentTest> classNodes = new ConcurrentHashMap<>();
+    // One parent ExtentTest per test class, thread-safe
+    private static final Map<String, ExtentTest> classTests = new ConcurrentHashMap<>();
 
     @Override
     public void onStart(ITestContext context) {
@@ -12,24 +22,78 @@ public class TestListener implements ITestListener {
 
     @Override
     public void onTestStart(ITestResult result) {
-        String className = result.getTestClass().getRealClass().getSimpleName();
+        String className = result.getTestClass().getName();
+        String simpleClassName = className.substring(className.lastIndexOf('.') + 1);
 
-        // One parent node per class, created once
-        ExtentTest classNode = classNodes.computeIfAbsent(className,
-            name -> ExtentManager.getInstance().createTest(name));
+        // Create or reuse the parent node for this class
+        ExtentTest parent = classTests.computeIfAbsent(simpleClassName,
+                name -> ExtentManager.getInstance().createTest(name));
 
-        // Child node for the actual test method
-        ExtentTest methodNode = classNode.createNode(
-            result.getMethod().getMethodName(),
-            result.getMethod().getDescription());
+        // Create the test method as a CHILD node under the class
+        String methodName = result.getMethod().getMethodName();
+        ExtentTest child = parent.createNode(methodName,
+                result.getMethod().getDescription());
 
         String[] groups = result.getMethod().getGroups();
         if (groups != null && groups.length > 0) {
-            methodNode.assignCategory(groups);
+            child.assignCategory(groups);
         }
 
-        ExtentManager.setTest(methodNode);
+        ExtentManager.setTest(child);
     }
 
-    // onTestSuccess, onTestFailure, onTestSkipped, onFinish stay the same
+    @Override
+    public void onTestSuccess(ITestResult result) {
+        ExtentManager.getTest().log(Status.PASS, "Test Passed");
+    }
+
+    @Override
+    public void onTestFailure(ITestResult result) {
+        ExtentManager.getTest().log(Status.FAIL, result.getThrowable());
+    }
+
+    @Override
+    public void onTestSkipped(ITestResult result) {
+        ExtentManager.getTest().log(Status.SKIP, "Test Skipped");
+    }
+
+    @Override
+    public void onFinish(ITestContext context) {
+        ExtentManager.getInstance().flush();
+    }
+}
+
+
+@BeforeMethod(alwaysRun = true)
+@Parameters({"environment", "teamName"})
+public void setUp(String environment, String teamName, ITestResult result) {
+    String testCaseName = result.getMethod().getMethodName();
+    setExecutionMode(testCaseName);
+    configureCaseInsensitiveDeserialization();
+
+    // Listener already created the ExtentTest before @BeforeMethod runs
+    ExtentManager.getTest().info("Test Started for: " + testCaseName);
+}
+
+
+@Override
+public void onTestSuccess(ITestResult result) {
+    ExtentManager.getTest().log(Status.PASS, "Test Passed");
+    ExtentManager.unload();
+}
+
+@Override
+public void onTestFailure(ITestResult result) {
+    ExtentManager.getTest().log(Status.FAIL, result.getThrowable());
+    ExtentManager.unload();
+}
+
+@Override
+public void onTestSkipped(ITestResult result) {
+    ExtentManager.getTest().log(Status.SKIP, "Test Skipped");
+    ExtentManager.unload();
+}
+
+public static void unload() {
+    test.remove();
 }
