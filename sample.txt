@@ -1,39 +1,32 @@
-package com.selenium.automation.annotations;
-
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
-
-@Retention(RetentionPolicy.RUNTIME)
-@Target(ElementType.TYPE)
-public @interface ReportName {
-    String value();
-}
-
-
-
-@ReportName("Claims Page API Tests")
-public class ClaimsPageAPITest extends BaseApiTest { ... }
-
-@ReportName("Admin Portal API Tests")  
-public class AdminPortalTest extends BaseApiTest { ... }
-
-
-
 @Override
 public void onTestStart(ITestResult result) {
+    // --- Determine parent (class-level) name ---
     Class<?> clazz = result.getTestClass().getRealClass();
-    
-    ReportName annotation = clazz.getAnnotation(ReportName.class);
-    String parentName = (annotation != null) 
-            ? annotation.value() 
+    ReportName reportNameAnnotation = clazz.getAnnotation(ReportName.class);
+    String parentName = (reportNameAnnotation != null && !reportNameAnnotation.value().isEmpty())
+            ? reportNameAnnotation.value()
             : clazz.getSimpleName();
 
+    // Create parent node for the class (only once, thread-safe across parallel threads)
     ExtentTest parent = classTests.computeIfAbsent(parentName,
             name -> ExtentManager.getInstance().createTest(name));
-    
-    // ... rest same as before
+
+    // --- Determine child (method-level) name ---
+    String methodName = result.getMethod().getMethodName();
+    String description = result.getMethod().getDescription();
+    String childName = (description != null && !description.isEmpty())
+            ? methodName + " — " + description
+            : methodName;
+
+    // Create child node under the class parent
+    ExtentTest child = parent.createNode(childName);
+
+    // Assign TestNG groups as categories (shown as filter chips in SparkReport)
+    String[] groups = result.getMethod().getGroups();
+    if (groups != null && groups.length > 0) {
+        child.assignCategory(groups);
+    }
+
+    // Store in ThreadLocal so @BeforeMethod, test method, and lifecycle methods can access it
+    ExtentManager.setTest(child);
 }
-
-
