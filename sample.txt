@@ -1,32 +1,21 @@
 @Override
-public void onTestStart(ITestResult result) {
-    // --- Determine parent (class-level) name ---
-    Class<?> clazz = result.getTestClass().getRealClass();
-    ReportName reportNameAnnotation = clazz.getAnnotation(ReportName.class);
-    String parentName = (reportNameAnnotation != null && !reportNameAnnotation.value().isEmpty())
-            ? reportNameAnnotation.value()
-            : clazz.getSimpleName();
+public void onStart(ITestContext context) {
+    ExtentManager.getInstance();
 
-    // Create parent node for the class (only once, thread-safe across parallel threads)
-    ExtentTest parent = classTests.computeIfAbsent(parentName,
-            name -> ExtentManager.getInstance().createTest(name));
+    // Pre-create parent nodes in testng.xml order so the report follows that order
+    for (org.testng.xml.XmlClass xmlClass : context.getCurrentXmlTest().getXmlClasses()) {
+        try {
+            Class<?> clazz = Class.forName(xmlClass.getName());
+            ReportName annotation = clazz.getAnnotation(ReportName.class);
+            String parentName = (annotation != null && !annotation.value().isEmpty())
+                    ? annotation.value()
+                    : clazz.getSimpleName();
 
-    // --- Determine child (method-level) name ---
-    String methodName = result.getMethod().getMethodName();
-    String description = result.getMethod().getDescription();
-    String childName = (description != null && !description.isEmpty())
-            ? methodName + " — " + description
-            : methodName;
-
-    // Create child node under the class parent
-    ExtentTest child = parent.createNode(childName);
-
-    // Assign TestNG groups as categories (shown as filter chips in SparkReport)
-    String[] groups = result.getMethod().getGroups();
-    if (groups != null && groups.length > 0) {
-        child.assignCategory(groups);
+            classTests.computeIfAbsent(parentName,
+                    name -> ExtentManager.getInstance().createTest(name));
+        } catch (ClassNotFoundException e) {
+            System.err.println(">>> Could not load class for pre-registration: " 
+                    + xmlClass.getName());
+        }
     }
-
-    // Store in ThreadLocal so @BeforeMethod, test method, and lifecycle methods can access it
-    ExtentManager.setTest(child);
 }
