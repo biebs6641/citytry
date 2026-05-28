@@ -1,75 +1,39 @@
-package com.selenium.automation.utilities;
+package com.selenium.automation.annotations;
 
-import com.aventstack.extentreports.ExtentReports;
-import com.aventstack.extentreports.ExtentTest;
-import com.aventstack.extentreports.reporter.ExtentSparkReporter;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 
-import java.io.File;
-import java.text.SimpleDateFormat;
-import java.util.Date;
-
-public class ExtentManager {
-
-    private static ExtentReports extent;
-    private static String reportPath;
-    private static final ThreadLocal<ExtentTest> test = new ThreadLocal<>();
-
-    public static synchronized ExtentReports getInstance() {
-        if (extent == null) {
-            String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
-            String reportDir = System.getProperty("user.dir") + "/reports/";
-            new File(reportDir).mkdirs();
-
-            reportPath = reportDir + "SparkReport_" + timeStamp + ".html";
-            ExtentSparkReporter spark = new ExtentSparkReporter(reportPath);
-
-            extent = new ExtentReports();
-            extent.attachReporter(spark);
-            extent.setSystemInfo("OS", System.getProperty("os.name"));
-            extent.setSystemInfo("Java Version", System.getProperty("java.version"));
-            extent.setSystemInfo("User", System.getProperty("user.name"));
-        }
-        return extent;
-    }
-
-    public static ExtentTest getTest() {
-        return test.get();
-    }
-
-    public static void setTest(ExtentTest extentTest) {
-        test.set(extentTest);
-    }
-
-    public static void unload() {
-        test.remove();
-    }
-
-    public static String getReportPath() {
-        return reportPath;
-    }
+@Retention(RetentionPolicy.RUNTIME)
+@Target(ElementType.TYPE)
+public @interface ReportName {
+    String value();
 }
 
 
-@BeforeMethod(alwaysRun = true)
-@Parameters({"environment", "teamName"})
-public void setUp(String environment, String teamName, ITestResult result) {
-    String testCaseName = result.getMethod().getMethodName();
-    setExecutionMode(testCaseName);
-    configureCaseInsensitiveDeserialization();
 
-    // Listener already created the ExtentTest, just log into it
-    if (ExtentManager.getTest() != null) {
-        ExtentManager.getTest().info("Test Started for: " + testCaseName);
-    }
+@ReportName("Claims Page API Tests")
+public class ClaimsPageAPITest extends BaseApiTest { ... }
+
+@ReportName("Admin Portal API Tests")  
+public class AdminPortalTest extends BaseApiTest { ... }
+
+
+
+@Override
+public void onTestStart(ITestResult result) {
+    Class<?> clazz = result.getTestClass().getRealClass();
+    
+    ReportName annotation = clazz.getAnnotation(ReportName.class);
+    String parentName = (annotation != null) 
+            ? annotation.value() 
+            : clazz.getSimpleName();
+
+    ExtentTest parent = classTests.computeIfAbsent(parentName,
+            name -> ExtentManager.getInstance().createTest(name));
+    
+    // ... rest same as before
 }
 
 
-public void LogResponse(Response response) {
-    if (response != null) {
-        ExtentManager.getTest().info("Total Execution Time: " + response.getTime());
-        ExtentManager.getTest().info("Status Line: " + response.statusLine());
-        ExtentManager.getTest().info(StringEscapeUtils.escapeHtml(response.asPrettyString()));
-    } else {
-        ExtentManager.getTest().fail("Response Returned as NULL");
-    }
-}
