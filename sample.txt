@@ -1,86 +1,75 @@
-package com.selenium.automation.listeners;
+package com.selenium.automation.utilities;
 
+import com.aventstack.extentreports.ExtentReports;
 import com.aventstack.extentreports.ExtentTest;
-import com.aventstack.extentreports.Status;
-import com.selenium.automation.utilities.ExtentManager;
-import org.testng.ITestContext;
-import org.testng.ITestListener;
-import org.testng.ITestResult;
+import com.aventstack.extentreports.reporter.ExtentSparkReporter;
 
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
+import java.io.File;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 
-public class TestListener implements ITestListener {
+public class ExtentManager {
 
-    // One parent ExtentTest per class, shared across threads
-    private static final Map<String, ExtentTest> classTests = new ConcurrentHashMap<>();
+    private static ExtentReports extent;
+    private static String reportPath;
+    private static final ThreadLocal<ExtentTest> test = new ThreadLocal<>();
 
-    @Override
-    public void onStart(ITestContext context) {
-        ExtentManager.getInstance();
+    public static synchronized ExtentReports getInstance() {
+        if (extent == null) {
+            String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
+            String reportDir = System.getProperty("user.dir") + "/reports/";
+            new File(reportDir).mkdirs();
 
-// Pre-create class parents in the order from testng.xml
-    for (org.testng.xml.XmlClass xmlClass : context.getCurrentXmlTest().getXmlClasses()) {
-        String fullName = xmlClass.getName();
-        String simpleName = fullName.substring(fullName.lastIndexOf('.') + 1);
-        classTests.computeIfAbsent(simpleName,
-                name -> ExtentManager.getInstance().createTest(name));
-    }
-    }
+            reportPath = reportDir + "SparkReport_" + timeStamp + ".html";
+            ExtentSparkReporter spark = new ExtentSparkReporter(reportPath);
 
-    @Override
-    public void onTestStart(ITestResult result) {
-        String className = result.getTestClass().getName();
-        String simpleClassName = className.substring(className.lastIndexOf('.') + 1);
-
-        // Create parent node for class (only once, thread-safe)
-        ExtentTest parent = classTests.computeIfAbsent(simpleClassName,
-                name -> ExtentManager.getInstance().createTest(name));
-
-        // Add this test method as a child under its class
-        ExtentTest child = parent.createNode(
-                result.getMethod().getMethodName(),
-                result.getMethod().getDescription()
-        );
-
-        String[] groups = result.getMethod().getGroups();
-        if (groups != null && groups.length > 0) {
-            child.assignCategory(groups);
+            extent = new ExtentReports();
+            extent.attachReporter(spark);
+            extent.setSystemInfo("OS", System.getProperty("os.name"));
+            extent.setSystemInfo("Java Version", System.getProperty("java.version"));
+            extent.setSystemInfo("User", System.getProperty("user.name"));
         }
-
-        ExtentManager.setTest(child);
+        return extent;
     }
 
-    @Override
-    public void onTestSuccess(ITestResult result) {
-        if (ExtentManager.getTest() != null) {
-            ExtentManager.getTest().log(Status.PASS, "Test Passed");
-        }
-        ExtentManager.unload();
+    public static ExtentTest getTest() {
+        return test.get();
     }
 
-    @Override
-    public void onTestFailure(ITestResult result) {
-        if (ExtentManager.getTest() != null) {
-            ExtentManager.getTest().log(Status.FAIL, "Test Failed: " 
-                    + result.getThrowable().getMessage());
-            ExtentManager.getTest().log(Status.FAIL, result.getThrowable());
-        }
-        ExtentManager.unload();
+    public static void setTest(ExtentTest extentTest) {
+        test.set(extentTest);
     }
 
-    @Override
-    public void onTestSkipped(ITestResult result) {
-        if (ExtentManager.getTest() != null) {
-            ExtentManager.getTest().log(Status.SKIP, "Test Skipped");
-        }
-        ExtentManager.unload();
+    public static void unload() {
+        test.remove();
     }
 
-    @Override
-    public void onFinish(ITestContext context) {
-        ExtentManager.getInstance().flush();
+    public static String getReportPath() {
+        return reportPath;
     }
 }
 
 
+@BeforeMethod(alwaysRun = true)
+@Parameters({"environment", "teamName"})
+public void setUp(String environment, String teamName, ITestResult result) {
+    String testCaseName = result.getMethod().getMethodName();
+    setExecutionMode(testCaseName);
+    configureCaseInsensitiveDeserialization();
+
+    // Listener already created the ExtentTest, just log into it
+    if (ExtentManager.getTest() != null) {
+        ExtentManager.getTest().info("Test Started for: " + testCaseName);
+    }
+}
+
+
+public void LogResponse(Response response) {
+    if (response != null) {
+        ExtentManager.getTest().info("Total Execution Time: " + response.getTime());
+        ExtentManager.getTest().info("Status Line: " + response.statusLine());
+        ExtentManager.getTest().info(StringEscapeUtils.escapeHtml(response.asPrettyString()));
+    } else {
+        ExtentManager.getTest().fail("Response Returned as NULL");
+    }
+}
