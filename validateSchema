@@ -1,0 +1,408 @@
+import json, sys, re, os, datetime, argparse
+from pathlib import Path
+
+
+# ─────────────────────────────────────────────
+#  Validation engine
+# ─────────────────────────────────────────────
+
+def validate(data, schema, path="$"):
+    errors = []
+    warnings = []
+
+    def err(p, msg):
+        errors.append({"path": p, "message": msg})
+
+    def warn(p, msg):
+        warnings.append({"path": p, "message": msg})
+
+    def _check_type(value, expected, p):
+        type_map = {
+            "string":  str,
+            "integer": int,
+            "number":  (int, float),
+            "boolean": bool,
+            "array":   list,
+            "object":  dict,
+            "null":    type(None),
+        }
+        # bool is subclass of int in Python — must check bool first
+        if expected == "integer":
+            if not isinstance(value, int) or isinstance(value, bool):
+                err(p, f"Expected type 'integer', got '{type(value).__name__}'")
+                return False
+        elif expected == "boolean":
+            if not isinstance(value, bool):
+                err(p, f"Expected type 'boolean', got '{type(value).__name__}'")
+                return False
+        elif expected in type_map:
+            if not isinstance(value, type_map[expected]):
+                err(p, f"Expected type '{expected}', got '{type(value).__name__}'")
+                return False
+        return True
+
+    def _validate(data, schema, p):
+        if not isinstance(schema, dict):
+            return
+
+        # type check
+        if "type" in schema:
+            if not _check_type(data, schema["type"], p):
+                return  # further checks meaningless
+
+        # enum
+        if "enum" in schema:
+            if data not in schema["enum"]:
+                err(p, f"Value {repr(data)} not in allowed values: {schema['enum']}")
+
+        # string constraints
+        if isinstance(data, str):
+            if "minLength" in schema and len(data) < schema["minLength"]:
+                err(p, f"String length {len(data)} is less than minLength {schema['minLength']}")
+            if "maxLength" in schema and len(data) > schema["maxLength"]:
+                err(p, f"String length {len(data)} exceeds maxLength {schema['maxLength']}")
+            if "pattern" in schema and not re.search(schema["pattern"], data):
+                err(p, f"Value does not match pattern '{schema['pattern']}'")
+            if "format" in schema:
+                _check_format(data, schema["format"], p)
+
+        # number constraints
+        if isinstance(data, (int, float)) and not isinstance(data, bool):
+            if "minimum" in schema and data < schema["minimum"]:
+                err(p, f"Value {data} is less than minimum {schema['minimum']}")
+            if "maximum" in schema and data > schema["maximum"]:
+                err(p, f"Value {data} exceeds maximum {schema['maximum']}")
+            if "exclusiveMinimum" in schema and data <= schema["exclusiveMinimum"]:
+                err(p, f"Value {data} must be > {schema['exclusiveMinimum']}")
+            if "exclusiveMaximum" in schema and data >= schema["exclusiveMaximum"]:
+                err(p, f"Value {data} must be < {schema['exclusiveMaximum']}")
+
+        # object constraints
+        if isinstance(data, dict):
+            required = schema.get("required", [])
+            for key in required:
+                if key not in data:
+                    err(p, f"Missing required field: '{key}'")
+
+            props = schema.get("properties", {})
+            for key, sub_schema in props.items():
+                if key in data:
+                    _validate(data[key], sub_schema, f"{p}.{key}")
+                elif key not in required:
+                    warn(p, f"Optional field '{key}' is absent")
+
+            # additionalProperties: false
+            if schema.get("additionalProperties") is False:
+                extra = set(data.keys()) - set(props.keys())
+                for k in extra:
+                    err(p, f"Additional property not allowed: '{k}'")
+
+        # array constraints
+        if isinstance(data, list):
+            if "minItems" in schema and len(data) < schema["minItems"]:
+                err(p, f"Array has {len(data)} item(s), minimum is {schema['minItems']}")
+            if "maxItems" in schema and len(data) > schema["maxItems"]:
+                err(p, f"Array has {len(data)} item(s), maximum is {schema['maxItems']}")
+            if "items" in schema:
+                for i, item in enumerate(data):
+                    _validate(item, schema["items"], f"{p}[{i}]")
+            if schema.get("uniqueItems"):
+                seen = []
+                for item in data:
+                    if item in seen:
+                        err(p, f"Array items must be unique; duplicate found: {repr(item)}")
+                    seen.append(item)
+
+    def _check_format(value, fmt, p):
+        if fmt == "email":
+            if not re.match(r"^[^@\s]+@[^@\s]+\.[^@\s]+$", value):
+                err(p, f"Value '{value}' is not a valid email address")
+        elif fmt == "date":
+            try:
+                datetime.datetime.strptime(value, "%Y-%m-%d")
+            except ValueError:
+                err(p, f"Value '{value}' is not a valid date (expected YYYY-MM-DD)")
+        elif fmt == "uri":
+            if not re.match(r"^https?://", value):
+                err(p, f"Value '{value}' does not look like a URI")
+        elif fmt == "ipv4":
+            parts = value.split(".")
+            if len(parts) != 4 or not all(p.isdigit() and 0 <= int(p) <= 255 for p in parts):
+                err(p, f"Value '{value}' is not a valid IPv4 address")
+
+    _validate(data, schema, path)
+    return errors, warnings
+
+
+# ─────────────────────────────────────────────
+#  HTML report generator
+# ─────────────────────────────────────────────
+
+def build_report(input_path, schema_path, data, schema, errors, warnings, output_path):
+    passed = len(errors) == 0
+    status_color  = "#1D9E75" if passed else "#E24B4A"
+    status_label  = "PASSED" if passed else "FAILED"
+    status_bg     = "#E1F5EE" if passed else "#FCEBEB"
+    status_border = "#0F6E56" if passed else "#A32D2D"
+    now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+    def json_to_html(obj, indent=0):
+        pad = "&nbsp;" * (indent * 4)
+        if isinstance(obj, dict):
+            if not obj:
+                return "<span class='jb'>{}</span>"
+            lines = [f"<span class='jb'>{{</span>"]
+            items = list(obj.items())
+            for i, (k, v) in enumerate(items):
+                comma = "," if i < len(items) - 1 else ""
+                lines.append(f"&nbsp;&nbsp;&nbsp;&nbsp;{pad}<span class='jk'>\"{k}\"</span>: {json_to_html(v, indent+1)}{comma}")
+            lines.append(f"{pad}<span class='jb'>}}</span>")
+            return "<br>".join(lines)
+        elif isinstance(obj, list):
+            if not obj:
+                return "<span class='jb'>[]</span>"
+            lines = [f"<span class='jb'>[</span>"]
+            for i, v in enumerate(obj):
+                comma = "," if i < len(obj) - 1 else ""
+                lines.append(f"&nbsp;&nbsp;&nbsp;&nbsp;{pad}{json_to_html(v, indent+1)}{comma}")
+            lines.append(f"{pad}<span class='jb'>]</span>")
+            return "<br>".join(lines)
+        elif isinstance(obj, str):
+            return f"<span class='js'>\"{obj}\"</span>"
+        elif isinstance(obj, bool):
+            return f"<span class='jv'>{'true' if obj else 'false'}</span>"
+        elif obj is None:
+            return f"<span class='jv'>null</span>"
+        else:
+            return f"<span class='jn'>{obj}</span>"
+
+    error_rows = ""
+    for e in errors:
+        error_rows += f"""
+        <tr>
+          <td><span class="badge badge-fail">FAIL</span></td>
+          <td><code>{e['path']}</code></td>
+          <td>{e['message']}</td>
+        </tr>"""
+
+    for w in warnings:
+        error_rows += f"""
+        <tr>
+          <td><span class="badge badge-warn">WARN</span></td>
+          <td><code>{w['path']}</code></td>
+          <td>{w['message']}</td>
+        </tr>"""
+
+    if not errors and not warnings:
+        error_rows = """
+        <tr>
+          <td colspan="3" style="text-align:center; color:#1D9E75; padding:20px; font-weight:500;">
+            All fields validated successfully — no issues found.
+          </td>
+        </tr>"""
+
+    summary_rows = f"""
+        <tr><td>Input file</td><td><code>{input_path}</code></td></tr>
+        <tr><td>Schema file</td><td><code>{schema_path}</code></td></tr>
+        <tr><td>Validated at</td><td>{now}</td></tr>
+        <tr><td>Total errors</td><td><strong style="color:#E24B4A">{len(errors)}</strong></td></tr>
+        <tr><td>Warnings</td><td><strong style="color:#BA7517">{len(warnings)}</strong></td></tr>
+    """
+
+    html = f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Schema Validation Report</title>
+<style>
+  * {{ box-sizing: border-box; margin: 0; padding: 0; }}
+  body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f5f0; color: #1a1a18; font-size: 14px; line-height: 1.6; }}
+  .page {{ max-width: 960px; margin: 0 auto; padding: 32px 24px; }}
+
+  .header {{ display: flex; align-items: center; justify-content: space-between; margin-bottom: 28px; flex-wrap: wrap; gap: 12px; }}
+  .header h1 {{ font-size: 22px; font-weight: 600; color: #1a1a18; }}
+  .header p {{ font-size: 13px; color: #888780; margin-top: 2px; }}
+
+  .status-badge {{
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 10px 22px; border-radius: 8px;
+    background: {status_bg}; border: 1.5px solid {status_border};
+    color: {status_color}; font-size: 18px; font-weight: 700; letter-spacing: .04em;
+  }}
+  .status-dot {{ width: 10px; height: 10px; border-radius: 50%; background: {status_color}; }}
+
+  .grid {{ display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px; }}
+  @media (max-width: 640px) {{ .grid {{ grid-template-columns: 1fr; }} }}
+
+  .card {{ background: #fff; border: 0.5px solid #d3d1c7; border-radius: 10px; overflow: hidden; }}
+  .card-header {{ padding: 12px 16px; border-bottom: 0.5px solid #d3d1c7; font-weight: 600; font-size: 13px; color: #444441; background: #f9f8f5; display: flex; align-items: center; gap: 8px; }}
+  .card-header .dot {{ width: 8px; height: 8px; border-radius: 50%; }}
+  .card-body {{ padding: 14px 16px; }}
+
+  .json-view {{ font-family: 'SFMono-Regular', 'Consolas', monospace; font-size: 12.5px; line-height: 1.7; overflow-x: auto; max-height: 340px; overflow-y: auto; }}
+  .jk {{ color: #534AB7; }}
+  .js {{ color: #0F6E56; }}
+  .jn {{ color: #854F0B; }}
+  .jv {{ color: #993C1D; }}
+  .jb {{ color: #444441; }}
+
+  .results-card {{ background: #fff; border: 0.5px solid #d3d1c7; border-radius: 10px; overflow: hidden; margin-bottom: 20px; }}
+  .results-card .card-header {{ font-size: 14px; }}
+
+  table {{ width: 100%; border-collapse: collapse; }}
+  th {{ text-align: left; padding: 10px 14px; font-size: 12px; font-weight: 600; color: #888780; text-transform: uppercase; letter-spacing: .06em; background: #f9f8f5; border-bottom: 0.5px solid #d3d1c7; }}
+  td {{ padding: 10px 14px; border-bottom: 0.5px solid #eeedea; vertical-align: top; }}
+  tr:last-child td {{ border-bottom: none; }}
+  tr:hover td {{ background: #f9f8f5; }}
+
+  .badge {{ display: inline-block; padding: 2px 9px; border-radius: 99px; font-size: 11px; font-weight: 700; letter-spacing: .04em; }}
+  .badge-fail {{ background: #FCEBEB; color: #A32D2D; border: 0.5px solid #F09595; }}
+  .badge-warn {{ background: #FAEEDA; color: #633806; border: 0.5px solid #FAC775; }}
+  .badge-pass {{ background: #E1F5EE; color: #085041; border: 0.5px solid #5DCAA5; }}
+
+  .summary-table td:first-child {{ color: #888780; width: 140px; font-size: 13px; }}
+  .summary-table td:last-child {{ font-size: 13px; }}
+
+  .footer {{ text-align: center; font-size: 12px; color: #b4b2a9; margin-top: 24px; }}
+  code {{ background: #f1efe8; padding: 1px 5px; border-radius: 4px; font-family: monospace; font-size: 12px; }}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="header">
+    <div>
+      <h1>Schema Validation Report</h1>
+      <p>Generated: {now}</p>
+    </div>
+    <div class="status-badge">
+      <div class="status-dot"></div>
+      {status_label}
+    </div>
+  </div>
+
+  <div class="grid">
+
+    <div class="card">
+      <div class="card-header">
+        <div class="dot" style="background:#534AB7"></div>
+        input.json
+      </div>
+      <div class="card-body">
+        <div class="json-view">{json_to_html(data)}</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <div class="dot" style="background:#1D9E75"></div>
+        schema.json
+      </div>
+      <div class="card-body">
+        <div class="json-view">{json_to_html(schema)}</div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="results-card">
+    <div class="card-header">
+      Validation Results &nbsp;
+      <span class="badge {'badge-fail' if errors else 'badge-pass'}">{len(errors)} error(s)</span>
+      &nbsp;
+      <span class="badge {'badge-warn' if warnings else 'badge-pass'}">{len(warnings)} warning(s)</span>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th style="width:80px">Status</th>
+          <th style="width:200px">Path</th>
+          <th>Message</th>
+        </tr>
+      </thead>
+      <tbody>
+        {error_rows}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <div class="dot" style="background:#888780"></div>
+      Run Summary
+    </div>
+    <div class="card-body">
+      <table class="summary-table">
+        {summary_rows}
+      </table>
+    </div>
+  </div>
+
+  <div class="footer">Schema Validator &mdash; pure Python 3 &mdash; no external dependencies</div>
+
+</div>
+</body>
+</html>"""
+
+    with open(output_path, "w", encoding="utf-8") as f:
+        f.write(html)
+
+
+# ─────────────────────────────────────────────
+#  CLI entry point
+# ─────────────────────────────────────────────
+
+def main():
+    parser = argparse.ArgumentParser(description="Validate JSON against a schema and produce an HTML report.")
+    parser.add_argument("input",   nargs="?", default="input.json",  help="Path to input JSON file")
+    parser.add_argument("schema",  nargs="?", default="schema.json", help="Path to schema JSON file")
+    parser.add_argument("--output","-o",      default="report.html", help="Output HTML report path")
+    args = parser.parse_args()
+
+    # Load files
+    for path in [args.input, args.schema]:
+        if not Path(path).exists():
+            print(f"[ERROR] File not found: {path}")
+            sys.exit(1)
+
+    with open(args.input,  encoding="utf-8") as f:
+        data = json.load(f)
+    with open(args.schema, encoding="utf-8") as f:
+        schema = json.load(f)
+
+    # Validate
+    errors, warnings = validate(data, schema)
+
+    # Console output
+    print(f"\n{'='*50}")
+    print(f"  Schema Validation")
+    print(f"  Input : {args.input}")
+    print(f"  Schema: {args.schema}")
+    print(f"{'='*50}")
+
+    if errors:
+        print(f"\n  FAILED — {len(errors)} error(s) found:\n")
+        for e in errors:
+            print(f"  [FAIL]  {e['path']}")
+            print(f"          {e['message']}")
+    else:
+        print(f"\n  PASSED — all fields valid.")
+
+    if warnings:
+        print(f"\n  {len(warnings)} warning(s):\n")
+        for w in warnings:
+            print(f"  [WARN]  {w['path']}")
+            print(f"          {w['message']}")
+
+    print(f"\n{'='*50}\n")
+
+    # Build HTML report
+    build_report(args.input, args.schema, data, schema, errors, warnings, args.output)
+    print(f"  HTML report saved: {args.output}\n")
+
+    sys.exit(1 if errors else 0)
+
+
+if __name__ == "__main__":
+    main()
