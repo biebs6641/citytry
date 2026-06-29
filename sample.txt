@@ -1,21 +1,20 @@
-@Override
-public void onStart(ITestContext context) {
-    ExtentManager.getInstance();
+import static org.hamcrest.MatcherAssert.assertThat;
+import static io.restassured.module.jsv.JsonSchemaValidator.matchesJsonSchema;
+import java.io.File;
+import java.nio.file.Files;
+import org.junit.Test;
 
-    // Pre-create parent nodes in testng.xml order so the report follows that order
-    for (org.testng.xml.XmlClass xmlClass : context.getCurrentXmlTest().getXmlClasses()) {
-        try {
-            Class<?> clazz = Class.forName(xmlClass.getName());
-            ReportName annotation = clazz.getAnnotation(ReportName.class);
-            String parentName = (annotation != null && !annotation.value().isEmpty())
-                    ? annotation.value()
-                    : clazz.getSimpleName();
+public class SchemaValidationTest {
 
-            classTests.computeIfAbsent(parentName,
-                    name -> ExtentManager.getInstance().createTest(name));
-        } catch (ClassNotFoundException e) {
-            System.err.println(">>> Could not load class for pre-registration: " 
-                    + xmlClass.getName());
-        }
+    @Test
+    public void validateInputAgainstSchema() throws Exception {
+
+        String inputJson = new String(Files.readAllBytes(
+            new File("src/test/resources/input.json").toPath()
+        ));
+
+        assertThat(inputJson, matchesJsonSchema(
+            new File("src/test/resources/schema.json")
+        ));
     }
 }
